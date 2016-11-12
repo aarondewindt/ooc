@@ -26,5 +26,7 @@ class TestAirport(unittest.TestCase):
         assert airport.airlines["EY"] == (1, 1)
         assert airport.airlines["SA"] == (2, 2)
 
+        print(airport.airlines)
+
     def test_load_terminal_bay_distance(self):
         pass
