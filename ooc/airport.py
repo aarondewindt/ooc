@@ -1,11 +1,57 @@
+from collections import namedtuple, OrderedDict
+
+AirlineType = namedtuple("AirlineType", ("group", "terminal"))
 
 
 class Airport:
     """
-    class holding all information regarding the airport.
+    Class holding all information regarding the airport.
+
+    :param string airlines_path: Path to csv file holding airline information.
     """
 
-    def __init__(self):
+    def __init__(self, airlines_path):
+        self.flights = None
+        """
+        :class:`ooc.Flights` object.
+        """
+
+        self.airlines_path = airlines_path
+        self.airlines = OrderedDict()
+        """Dictionary holding airline information."""
+
+        self.load_airlines()
+
+    def load_airlines(self):
+        with open(self.airlines_path) as f:
+            # Clear airline dictionary.
+            self.airlines.clear()
+
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["airline", "group", "terminal"]:
+                raise Exception("Invalid airline csv file.")
+
+            # Read line by line.
+            for line in f:
+                # Split and strip values.
+                line_values = [x.strip() for x in line.split(",")]
+
+                # Convert to integers and create AirlineType object.
+                airline = AirlineType(group=int(line_values[1]),
+                                      terminal=int(line_values[2]))
+
+                # Add it to the dictionary.
+                self.airlines[line_values[0]] = airline
+
+    def load_aircrafts(self):
+        pass
+
+    def load_terminal_bay_distance(self):
         pass
 
     def terminal_bay_distance(self, term, k):
@@ -14,27 +60,6 @@ class Airport:
         :param int k: Bay index
         :return: Distance between bay and terminal.
         :rtype: float
-        """
-        return
-
-    @property
-    def b(self):
-        """
-        Bay Compliance Matrix containing the information whether ac
-        type and bay are compatible.
-        """
-        return
-
-    @property
-    def d2(self):
-        """
-        Array containing the distances from all bays to all the gates.
-        """
-
-    @property
-    def f(self):
-        """
-        Array containing the information whether the bay has a fuel pit.
         """
         return
 

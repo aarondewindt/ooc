@@ -17,6 +17,12 @@ class Flights:
     Class holding all information regarding the flights.
     """
 
+    def __init__(self):
+        self.airport = None
+        """
+        class:`ooc.Airport` object.
+        """
+
     @property
     def n_flights(self):
         """

@@ -42,3 +42,9 @@ class LpGenerator:
         flights of the day
         """
 
+        # Join airport and flights objects together
+        self.airport.flights = flights
+        self.flights.airport = airport
+
+
+
