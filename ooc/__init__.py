@@ -3,6 +3,6 @@ __author__ = "Aaron M. de Windt"
 
 
 from ooc.airport import Airport
-from ooc.flights import Flights
+from ooc.flights import Flights, ft
 from ooc.bay_assignment import BayAssignment
 from ooc.gate_assignment import GateAssignment
