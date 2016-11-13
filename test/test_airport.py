@@ -20,31 +20,31 @@ class TestAirport(unittest.TestCase):
 
     def test_load_airlines(self):
         airport = Airport(abs_path("./airport_data"))
-        assert airport.airlines["KQ"] == (0, "A")
-        assert airport.airlines["G9"] == (1, "B")
-        assert airport.airlines["EY"] == (1, "B")
-        assert airport.airlines["SA"] == (2, "C")
+        self.assertEquals(airport.airlines["KQ"], (0, "A"))
+        self.assertEquals(airport.airlines["G9"], (1, "B"))
+        self.assertEquals(airport.airlines["EY"], (2, "C"))
+        self.assertEquals(airport.airlines["SA"], (3, "D"))
 
     def test_load_aircraft(self):
         airport = Airport(abs_path("./airport_data"))
 
-        assert airport.aircraft["B747"] == ("H", 400)
-        assert airport.aircraft["B772"] == ("G", 300)
-        assert airport.aircraft["B773"] == ("G", 300)
-        assert airport.aircraft["B787"] == ("F", 200)
-        assert airport.aircraft["B788"] == ("F", 200)
-        assert airport.aircraft["A330"] == ("F", 200)
-        assert airport.aircraft["B767"] == ("F", 200)
-        assert airport.aircraft["B73J"] == ("E", 150)
-        assert airport.aircraft["B737"] == ("D", 100)
-        assert airport.aircraft["B738"] == ("D", 100)
-        assert airport.aircraft["A320"] == ("D", 100)
-        assert airport.aircraft["E90"] == ("C", 90)
-        assert airport.aircraft["B733"] == ("B", 85)
-        assert airport.aircraft["E70"] == ("B", 80)
-        assert airport.aircraft["Q400"] == ("B", 50)
-        assert airport.aircraft["AT4"] == ("A", 50)
-        assert airport.aircraft["AT7"] == ("A", 50)
+        self.assertEquals(airport.aircraft["747"], ("H", 400))
+        self.assertEquals(airport.aircraft["772"], ("G", 300))
+        self.assertEquals(airport.aircraft["773"], ("G", 300))
+        self.assertEquals(airport.aircraft["787"], ("F", 200))
+        self.assertEquals(airport.aircraft["788"], ("F", 200))
+        self.assertEquals(airport.aircraft["A330"], ("F", 200))
+        self.assertEquals(airport.aircraft["767"], ("F", 200))
+        self.assertEquals(airport.aircraft["73J"], ("E", 150))
+        self.assertEquals(airport.aircraft["737"], ("D", 100))
+        self.assertEquals(airport.aircraft["738"], ("D", 100))
+        self.assertEquals(airport.aircraft["A320"], ("D", 100))
+        self.assertEquals(airport.aircraft["E90"], ("C", 90))
+        self.assertEquals(airport.aircraft["733"], ("B", 85))
+        self.assertEquals(airport.aircraft["E70"], ("B", 80))
+        self.assertEquals(airport.aircraft["Q400"], ("B", 50))
+        self.assertEquals(airport.aircraft["AT4"], ("A", 50))
+        self.assertEquals(airport.aircraft["AT7"], ("A", 50))
 
     def test_load_bay_compliance_matrix(self):
         airport = Airport(abs_path("./airport_data"))
@@ -52,23 +52,23 @@ class TestAirport(unittest.TestCase):
         # There is no lazy way to generate a large list of asserts. So
         # I'll just a few random ones.
         # Test bay list
-        assert airport.bay_names[0] == "2A"
-        assert airport.bay_names[-1] == "H10"
-        assert airport.bay_names[18] == "15"
+        self.assertEquals(airport.bay_names[0], "2A")
+        self.assertEquals(airport.bay_names[-1], "H10")
+        self.assertEquals(airport.bay_names[18], "15")
 
-        assert airport._bay_compliance_matrix[0]["H"] is False
-        assert airport._bay_compliance_matrix[0]["A"] is True
-        assert airport._bay_compliance_matrix[-1]["H"] is False
-        assert airport._bay_compliance_matrix[-1]["A"] is True
-        assert airport._bay_compliance_matrix[22]["H"] is True
-        assert airport._bay_compliance_matrix[22]["A"] is False
+        self.assertIs(airport._bay_compliance_matrix[0]["H"], False)
+        self.assertIs(airport._bay_compliance_matrix[0]["A"], True)
+        self.assertIs(airport._bay_compliance_matrix[-1]["H"], False)
+        self.assertIs(airport._bay_compliance_matrix[-1]["A"], True)
+        self.assertIs(airport._bay_compliance_matrix[22]["H"], True)
+        self.assertIs(airport._bay_compliance_matrix[22]["A"], False)
 
     def test_load_bay_terminal_distance(self):
         airport = Airport(abs_path("./airport_data"))
 
         # Same as in test_load_bay_compliance_matrix, I'll just test a few cases.
-        assert airport.terminal_names[0] == "A"
-        assert airport.terminal_names[-1] == "D"
+        self.assertEquals(airport.terminal_names[0], "A")
+        self.assertEquals(airport.terminal_names[-1], "D")
 
         self.assertAlmostEqual(airport._bay_terminal_distance[0]["A"], 19)
         self.assertAlmostEqual(airport._bay_terminal_distance[22]["C"], 18)
@@ -76,25 +76,25 @@ class TestAirport(unittest.TestCase):
 
     def test_load_domestic_airports(self):
         airport = Airport(abs_path("./airport_data"))
-        assert "HOA" in airport.domestic_airports
-        assert "GGM" in airport.domestic_airports
-        assert "KLK" in airport.domestic_airports
-        assert "KEY" in airport.domestic_airports
-        assert "ILU" in airport.domestic_airports
-        assert "KRV" in airport.domestic_airports
-        assert "KIS" in airport.domestic_airports
-        assert "KTL" in airport.domestic_airports
-        assert "KWY" in airport.domestic_airports
-        assert "LBN" in airport.domestic_airports
-        assert "LAU" in airport.domestic_airports
-        assert "LBK" in airport.domestic_airports
-        assert "LOK" in airport.domestic_airports
-        assert "LOY" in airport.domestic_airports
-        assert "LKG" in airport.domestic_airports
-        assert "MYD" in airport.domestic_airports
-        assert "NDE" in airport.domestic_airports
-        assert "RBT" in airport.domestic_airports
-        assert "MRE" in airport.domestic_airports
+        self.assertIn("HOA", airport.domestic_airports)
+        self.assertIn("GGM", airport.domestic_airports)
+        self.assertIn("KLK", airport.domestic_airports)
+        self.assertIn("KEY", airport.domestic_airports)
+        self.assertIn("ILU", airport.domestic_airports)
+        self.assertIn("KRV", airport.domestic_airports)
+        self.assertIn("KIS", airport.domestic_airports)
+        self.assertIn("KTL", airport.domestic_airports)
+        self.assertIn("KWY", airport.domestic_airports)
+        self.assertIn("LBN", airport.domestic_airports)
+        self.assertIn("LAU", airport.domestic_airports)
+        self.assertIn("LBK", airport.domestic_airports)
+        self.assertIn("LOK", airport.domestic_airports)
+        self.assertIn("LOY", airport.domestic_airports)
+        self.assertIn("LKG", airport.domestic_airports)
+        self.assertIn("MYD", airport.domestic_airports)
+        self.assertIn("NDE", airport.domestic_airports)
+        self.assertIn("RBT", airport.domestic_airports)
+        self.assertIn("MRE", airport.domestic_airports)
 
     def test_terminal_bay_distance(self):
         airport = Airport(abs_path("./airport_data"))
@@ -102,8 +102,8 @@ class TestAirport(unittest.TestCase):
 
     def test_n_bays(self):
         airport = Airport(abs_path("./airport_data"))
-        assert airport.n_bays == 46
+        self.assertEquals(airport.n_bays, 46)
 
     def test_n_gates(self):
         airport = Airport(abs_path("./airport_data"))
-        assert airport.n_gates == 0
+        self.assertEquals(airport.n_gates, 0)

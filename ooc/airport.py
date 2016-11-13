@@ -96,7 +96,12 @@ class Airport:
                                       terminal=line_values[2])
 
                 # Add it to the dictionary.
-                self.airlines[line_values[0]] = airline
+                if line_values[0] not in self.airlines:
+                    self.airlines[line_values[0]] = airline
+                else:
+                    raise Exception("Airline '{}' has been defined multiple times in the airline csv file.". format(
+                        line_values[0]
+                    ))
 
     def load_aircraft(self):
         """

@@ -24,7 +24,8 @@ FlightType = namedtuple("FlightType",
                          "out_flight_no",
                          "dest",
                          "etd",
-                         "ac_type"))
+                         "ac_type",
+                         "airline"))
 """
 Named tuple used to hold flight information
 """
@@ -45,13 +46,17 @@ class Flights:
     Class holding all information regarding the flights.
 
     :param string flight_data_path: PAth to directory holding flight data.
+    :param ooc.Airport airport: Airport object holding airport specific information.
     """
 
-    def __init__(self, flight_data_path):
-        self.airport = None
+    def __init__(self, flight_data_path, airport):
+        self.airport = airport
         """
         class:`ooc.Airport` object.
         """
+
+        # Attach to airport object.
+        airport.flights = self
 
         # Get absolute path to flight data in case a relative path was given.
         # This is to prevent any future bugs which may be caused by switching the
@@ -94,6 +99,19 @@ class Flights:
                 # Split and strip values.
                 line_values = [None if y == "" else y for y in [x.strip() for x in line.split(",")]]
 
+                # Get and check airline code. If neither an inbound
+                # nor outbound flight number was given, set airline
+                # code to None.
+                airline_code = None
+                for fl_no in [line_values[1],   # Inbound flight number
+                              line_values[7]]:  # Outbound flight number
+                    if fl_no is not None:  # If there is a flight number get airline code.
+                        airline_code = fl_no[:2]
+                        # Check whether the airline code was defined in the airlines csv file.
+                        if airline_code not in self.airport.airlines:
+                            raise Exception("Airline '{}' for flight '{}' is invalid.".format(airline_code,
+                                                                                              len(self.flight_data)))
+
                 flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.
                                     in_flight_no=line_values[1],
                                     origin=line_values[2],
@@ -104,7 +122,8 @@ class Flights:
                                     out_flight_no=line_values[7],
                                     dest=line_values[8],
                                     etd=time(*[int(x) for x in line_values[9].split(":")]),  # create time obj from etd
-                                    ac_type=line_values[10])
+                                    ac_type=line_values[10],
+                                    airline=airline_code)
                 self.flight_data.append(flight)
 
     @property
@@ -113,16 +132,6 @@ class Flights:
         Number of flights.
         """
         return len(self.flight_data)
-
-    def flight_name(self, i):
-        """
-        Returns the name of a flight. This name consists of the flight number and type.
-        :param int i: Flight index
-        :return: Flight name
-        :rtype: string
-        """
-        # TODO: Generate name out of table holding the flight information.
-        return str(i)
 
     def n_passengers(self, i):
         """
@@ -140,6 +149,12 @@ class Flights:
         :return: Airline code
         :rtype: string
         """
+        # First check the inbound flight number for the airline code.
+        # If there is no inbound flight number than check the outbound.
+        if self.flight_data[i].airline is None:
+            raise Exception("Flight '{}' has neither in inbound or outbound flight number.".format(i))
+        else:
+            return self.flight_data[i].airline
 
     def terminal(self, i):
         """
@@ -147,6 +162,8 @@ class Flights:
         :param int i: Flight index
         :return: Terminal index for this flight.
         """
+        airline_code = self.airline(i)
+        return self.airport.airlines[airline_code].terminal
 
     def preference(self, i, k):
         """
@@ -154,14 +171,36 @@ class Flights:
         :return: Preference of flight bay combination.
         :rtype: float
         """
+        # TODO: Figure this one out.
+        return 1
 
     def domestic(self, i):
         """
-        Derived from airport code in raw airport_data.
+        Derived from airport code in raw airport_data. It first checks the origin airport. If no
         :param int i: Flight index
         :return: True if it's a domestic flight
         :rtype: bool
         """
+
+        if self.flight_data[i].flight_type in [ft.Full, ft.Arr]:
+            # If this a full flight or arrival, check the origin
+            # airport first. If no origin airport was given check
+            # the destination airport.
+            airport_codes = [self.flight_data[i].origin,
+                             self.flight_data[i].dest]
+        else:
+            # If this is a parking or departure flight, then check
+            # the destination first. If it's missing check the origin.
+            airport_codes = [self.flight_data[i].dest,
+                             self.flight_data[i].origin]
+
+        for airport_code in airport_codes:
+            if airport_code is not None:
+                return airport_code in self.airport.domestic_airports
+
+        # If this point was reached, than neither a origin nor destination
+        # airport was given.
+        raise Exception("Flight '{}' has neither a origin or outbound airport.")
 
     def time_conflict(self, i, j):
         """
@@ -170,4 +209,8 @@ class Flights:
         :return: Returns True if the two fights conflict in time.
         """
 
+        fi = self.flight_data[i]
+        fj = self.flight_data[j]
 
+        return ((fi.eta < fj.eta) and (fj.eta < fi.etd)) or \
+               ((fi.eta < fj.etd) and (fj.etd < fi.etd))

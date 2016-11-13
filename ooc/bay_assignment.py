@@ -132,8 +132,7 @@ class BayAssignment:
         :return: The name of the binary decision variable
         """
         # Generate name.
-        name = "X_{}_{}".format(self.flights.flight_name(i),
-                                self.airport.bay_names[k])
+        name = "X_{}_{}".format(i, k)
 
         # Add it to the decision variable name list if it's not in there already.
         if name not in self.decision_vars_flight_bay:

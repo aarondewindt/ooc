@@ -1,5 +1,20 @@
 airline, group, terminal
 KQ     , 0    , A
 G9     , 1    , B
-EY     , 1    , B
-SA     , 2    , C
+EY     , 2    , C
+SA     , 3    , D
+BA     , 0    , A
+EK     , 1    , B
+ET     , 2    , C
+KL     , 3    , D
+LX     , 0    , A
+MK     , 1    , B
+MS     , 2    , C
+PW     , 3    , D
+QR     , 0    , A
+SN     , 2    , C
+SV     , 3    , D
+TK     , 0    , A
+TM     , 1    , B
+WB     , 2    , C
+CZ     , 3    , D
