@@ -41,10 +41,11 @@ class Airport:
         """Path to the bay terminal distance csv file."""
         self.domestic_airports_path = normpath(join(airport_data_path, "domestic_airports.csv"))
         """Path to domestic airports csv file."""
+        self.fueling_path = normpath(join(airport_data_path, "fueling.csv"))  #: Path to fueling csv file.
 
         self.airlines = OrderedDict()  #: Dictionary holding airline information.
         self.aircraft = OrderedDict()  #: Dictionary holding aircraft information.
-        self._bay_compliance_matrix = []
+        self.bay_compliance_matrix = []
         """
         2D-list/dictionary holding the bay compliance matrix. The first index is the bay index. The second one
         is a dictionary key with the aircraft group.
@@ -56,6 +57,7 @@ class Airport:
         self.bay_names = []  #: List holding the bay names. Bay indices are based on this dictionary
         self.terminal_names = []  #: List holding the terminal names.
         self.domestic_airports = []  #: List of domestic airports.
+        self.fueling = []  #: List containing booleans indicating whether a bay has fueling pits or not.
 
         # Load in data
         self.load_aircraft()
@@ -63,6 +65,7 @@ class Airport:
         self.load_bay_terminal_distance()
         self.load_airlines()
         self.load_domestic_airports()
+        self.load_fueling()
 
     def load_airlines(self):
         """
@@ -134,7 +137,7 @@ class Airport:
         Loads in the bay compliance matrix from the csv file.
         """
         with open(self.bay_compliance_matrix_path) as f:
-            self._bay_compliance_matrix.clear()
+            self.bay_compliance_matrix.clear()
             self.bay_names.clear()
 
             # Read the heading
@@ -152,14 +155,14 @@ class Airport:
                 line_values = [x.strip() for x in line.split(",")]
 
                 # Create bay info dictionary
-                bay_info = dict(zip(aircraft_groups,
-                                    [bool(int(x)) for x in line_values[1:]]))
+                bay_info = OrderedDict(zip(aircraft_groups,
+                                           [bool(int(x)) for x in line_values[1:]]))
 
                 # Add bay name to bay name list.
                 self.bay_names.append(line_values[0])
 
                 # Add it to the bay compliance dict.
-                self._bay_compliance_matrix.append(bay_info)
+                self.bay_compliance_matrix.append(bay_info)
 
     def load_bay_terminal_distance(self):
         with open(self.bay_terminal_distance_path) as f:
@@ -190,13 +193,13 @@ class Airport:
 
                 # Create bay info list
                 # bay_info = [int(x) for x in line_values[1:]]
-                bay_info = dict(zip(self.terminal_names,
-                                    [float(x) for x in line_values[1:]]))
+                bay_info = OrderedDict(zip(self.terminal_names,
+                                           [float(x) for x in line_values[1:]]))
 
                 # Add it to the bay compliance dict.
                 self._bay_terminal_distance[bay_index] = bay_info
 
-            # Check whether we have the information for all bay's.
+            # Check whether we have the information for all bays.
             missing = []
             for bay_index, bay_info in enumerate(self._bay_terminal_distance):
                 if bay_info is None:
@@ -212,6 +215,39 @@ class Airport:
             for line in f:
                 # Strip line of leading and trailing spaces, tabs, etc, and append it to the list.
                 self.domestic_airports.append(line.strip())
+
+    def load_fueling(self):
+        self.fueling = [None] * len(self.bay_names)
+
+        with open(self.fueling_path) as f:
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["bay", "fueling"]:
+                raise Exception("Invalid fueling csv file '{}'.".format(self.airlines_path))
+
+            # Read line by line
+            for line in f:
+                # Split and strip values.
+                line_values = [x.strip() for x in line.split(",")]
+
+                # Check whether bay is valid.
+                if line_values[0] not in self.bay_names:
+                    raise Exception("Invalid bay '{}' in the fueling csv.".format(line_values[0]))
+
+                bay_index = self.bay_names.index(line_values[0])
+                self.fueling[bay_index] = bool(int(line_values[1]))
+
+            # Check whether we have the fueling information for all bays.
+            missing = []
+            for bay_index, bay_info in enumerate(self.fueling):
+                if bay_info is None:
+                    missing.append(self.bay_names[bay_index])
+            if len(missing):
+                raise Exception("Fueling information is missing for bays\n{}".format(missing))
 
     def terminal_bay_distance(self, term, k):
         """

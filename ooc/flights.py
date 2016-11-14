@@ -112,6 +112,11 @@ class Flights:
                             raise Exception("Airline '{}' for flight '{}' is invalid.".format(airline_code,
                                                                                               len(self.flight_data)))
 
+                # If this flight has neither an inbound nor outbound flight number that get the airline from the
+                # last read airline. This happens for park flights and departure flights at the end of the day.
+                if airline_code is None:
+                    airline_code = self.flight_data[-1].airline
+
                 flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.
                                     in_flight_no=line_values[1],
                                     origin=line_values[2],
@@ -124,6 +129,12 @@ class Flights:
                                     etd=time(*[int(x) for x in line_values[9].split(":")]),  # create time obj from etd
                                     ac_type=line_values[10],
                                     airline=airline_code)
+
+                # Check if the aircraft type is valid
+                if flight.ac_type not in self.airport.aircraft:
+                    raise Exception("Invalid aircraft type '{}' for flight '{}'.".format(flight.ac_type,
+                                                                                         len(self.flight_data)))
+
                 self.flight_data.append(flight)
 
     @property
@@ -214,3 +225,12 @@ class Flights:
 
         return ((fi.eta < fj.eta) and (fj.eta < fi.etd)) or \
                ((fi.eta < fj.etd) and (fj.etd < fi.etd))
+
+    def bay_compliance(self, i, k):
+        """
+        :param int i: FLight index
+        :param int k: Bay index
+        :return: True if the aircraft type for this flight complies with the bay used.
+        """
+        ac_group = self.airport.aircraft[self.flight_data[i].ac_type].group
+        return self.airport.bay_compliance_matrix[k][ac_group]

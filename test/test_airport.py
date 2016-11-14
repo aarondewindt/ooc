@@ -56,12 +56,12 @@ class TestAirport(unittest.TestCase):
         self.assertEquals(airport.bay_names[-1], "H10")
         self.assertEquals(airport.bay_names[18], "15")
 
-        self.assertIs(airport._bay_compliance_matrix[0]["H"], False)
-        self.assertIs(airport._bay_compliance_matrix[0]["A"], True)
-        self.assertIs(airport._bay_compliance_matrix[-1]["H"], False)
-        self.assertIs(airport._bay_compliance_matrix[-1]["A"], True)
-        self.assertIs(airport._bay_compliance_matrix[22]["H"], True)
-        self.assertIs(airport._bay_compliance_matrix[22]["A"], False)
+        self.assertIs(airport.bay_compliance_matrix[0]["H"], False)
+        self.assertIs(airport.bay_compliance_matrix[0]["A"], True)
+        self.assertIs(airport.bay_compliance_matrix[-1]["H"], False)
+        self.assertIs(airport.bay_compliance_matrix[-1]["A"], True)
+        self.assertIs(airport.bay_compliance_matrix[22]["H"], True)
+        self.assertIs(airport.bay_compliance_matrix[22]["A"], False)
 
     def test_load_bay_terminal_distance(self):
         airport = Airport(abs_path("./airport_data"))
@@ -95,6 +95,11 @@ class TestAirport(unittest.TestCase):
         self.assertIn("NDE", airport.domestic_airports)
         self.assertIn("RBT", airport.domestic_airports)
         self.assertIn("MRE", airport.domestic_airports)
+
+    def test_load_fueling(self):
+        airport = Airport(abs_path("./airport_data"))
+        self.assertIs(airport.fueling[0], True)
+        self.assertIs(airport.fueling[33], False)
 
     def test_terminal_bay_distance(self):
         airport = Airport(abs_path("./airport_data"))
