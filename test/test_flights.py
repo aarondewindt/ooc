@@ -22,14 +22,21 @@ class TestFlights(unittest.TestCase):
     def test_load_flight_data(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data"), airport)
-        self.assertEquals(flights.flight_data[0].flight_type, ft.Full)
-        self.assertEquals(flights.flight_data[0][0], ft.Full)
-        self.assertEquals(flights.flight_data[0].eta, time(20, 30))
-        self.assertEquals(flights.flight_data[56].flight_type, ft.Dep)
-        self.assertEquals(flights.flight_data[26].ac_type, "E90")
-        self.assertIsNone(flights.flight_data[4].in_flight_no)
-        self.assertEquals(flights.flight_data[0].in_flight_no, "BA065")
-        self.assertEquals(flights.flight_data[15].in_flight_no, "KL565")
+        self.assertEquals(flights.flight_schedule[0].flight_type, ft.Full)
+        self.assertEquals(flights.flight_schedule[0][0], ft.Full)
+        self.assertEquals(flights.flight_schedule[0].eta, time(20, 30))
+        self.assertEquals(flights.flight_schedule[56].flight_type, ft.Dep)
+        self.assertEquals(flights.flight_schedule[26].ac_type, "E90")
+        self.assertIsNone(flights.flight_schedule[4].in_flight_no)
+        self.assertEquals(flights.flight_schedule[0].in_flight_no, "BA065")
+        self.assertEquals(flights.flight_schedule[15].in_flight_no, "KL565")
+
+    def test_load_preferences(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data"), airport)
+
+        self.assertEquals(flights.adjacency[0], (8, 9))
+        self.assertEquals(flights.adjacency[1], (13, 14))
 
     def test_n_flights(self):
         airport = Airport(abs_path("./airport_data"))
@@ -55,10 +62,21 @@ class TestFlights(unittest.TestCase):
         self.assertEquals(flights.terminal(0), "A")
         self.assertEquals(flights.terminal(5), "C")
 
-    @unittest.skip
     def test_preference(self):
         # The preference function has to be implemented first.
-        pass
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data"), airport)
+        self.assertEquals(flights.preferences_table["KQ210"].dest, "BOM")
+        self.assertEquals(flights.preferences_table["KQ210"].bays, (21,))
+        self.assertEquals(flights.preferences_table["KQ210"].gates, (17,))
+        self.assertEquals(flights.preferences_table["ET"].dest, "ADD")
+        self.assertEquals(flights.preferences_table["ET"].bays, (11, 12))
+        self.assertEquals(flights.preferences_table["ET"].gates, (7, 8))
+
+    def test_load_adjacency(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data"), airport)
+        self.assertEquals(flights.adjacency, [(8, 9), (13, 14)])
 
     def test_domestic(self):
         airport = Airport(abs_path("./airport_data"))

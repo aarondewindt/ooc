@@ -42,6 +42,7 @@ class Airport:
         self.domestic_airports_path = normpath(join(airport_data_path, "domestic_airports.csv"))
         """Path to domestic airports csv file."""
         self.fueling_path = normpath(join(airport_data_path, "fueling.csv"))  #: Path to fueling csv file.
+        self.gates_path = normpath(join(airport_data_path, "gates.csv"))  #: Path to fueling csv file.
 
         self.airlines = OrderedDict()  #: Dictionary holding airline information.
         self.aircraft = OrderedDict()  #: Dictionary holding aircraft information.
@@ -54,6 +55,7 @@ class Airport:
 
         self._bay_terminal_distance = OrderedDict()  #: Dictionary holding the bay terminal distance table
 
+        self.gate_names = []  #: List holding the gate names.
         self.bay_names = []  #: List holding the bay names. Bay indices are based on this dictionary
         self.terminal_names = []  #: List holding the terminal names.
         self.domestic_airports = []  #: List of domestic airports.
@@ -66,6 +68,7 @@ class Airport:
         self.load_airlines()
         self.load_domestic_airports()
         self.load_fueling()
+        self.load_gates()
 
     def load_airlines(self):
         """
@@ -248,6 +251,22 @@ class Airport:
                     missing.append(self.bay_names[bay_index])
             if len(missing):
                 raise Exception("Fueling information is missing for bays\n{}".format(missing))
+
+    def load_gates(self):
+        self.gate_names.clear()
+        with open(self.gates_path) as f:
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["gate"]:
+                raise Exception("Invalid fueling csv file '{}'.".format(self.airlines_path))
+
+            for line in f:
+                self.gate_names.append(line.strip())
+
 
     def terminal_bay_distance(self, term, k):
         """

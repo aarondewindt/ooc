@@ -59,6 +59,11 @@ class BayAssignment:
         of towings during day time.
         """
 
+        self.s_list = []
+        """
+        List holding the names of the adjacency constraint penalty values
+        """
+
         self.alpha = 1
         """
         Weight for the passenger transport distance objective function.
@@ -198,8 +203,8 @@ class BayAssignment:
         Returns the name of the binary decision variable connecting a flight ``i``
         with bay ``k``.
 
-        :param int i: Index representing the flight
-        :param int k: Index representing the bay
+        :param int i: Flight index
+        :param int k: Bay index
         :return: The name of the binary decision variable
         """
         # Generate name.
@@ -212,10 +217,40 @@ class BayAssignment:
         return name
 
     def v(self, i, k):
-        pass
+        """
+        :param i: Flight index
+        :param k: Bay index
+        :return: Name of the penalty value with the number of towings from parking to departure.
+        :rtype: string
+        """
+        name = "V_{}_{}".format(i, k)
+        if name not in self.v_list:
+            self.v_list.append(name)
+        return name
 
     def w(self, i, k):
-        pass
+        """
+        :param i: Flight index
+        :param k: Bay index
+        :return: Name of the penalty value with the number of towings during day time.
+        """
+        name = "W_{}_{}".format(i, k)
+        if name not in self.w_list:
+            self.w_list.append(name)
+        return name
+
+    def s(self, k, i, j):
+        """
+
+        :param k: Bay index
+        :param i: Flight 1 index
+        :param j: Flight 2 index
+        :return: Name of the adjacency soft constraint penalty value.
+        """
+        name = "S_{}_{}".format(i, k)
+        if name not in self.s_list:
+            self.s_list.append(name)
+        return name
 
     def constraint_single_time_slot(self):
         """
@@ -233,6 +268,8 @@ class BayAssignment:
                         c += "tc_{}_{}: {:10s} + {:10s} <= 1;\n".format(i, j,
                                                                         self.x(i, k),
                                                                         self.x(j, k))
+        c += "\n"
+        return c
 
     def constraint_single_bay_compliance(self):
         """
@@ -253,7 +290,8 @@ class BayAssignment:
                     # Add new line if necessary
                     if len(c.split("\n")[-1]) > self.line_width_limit:
                         c += "\n"
-            c += " = 1;"
+            c += " = 1;\n"
+        return c
 
     def constraint_fueling(self):
         """
@@ -275,8 +313,8 @@ class BayAssignment:
             d = ""  # Holds the content of the the constraint for this flight
             q = 0  # If 0, no constraint. If 1, dep non-domestic or full domestic. If 2, dep domestic.
 
-            if (not self.flights.domestic(i) and (self.flights.flight_data[i].flight_type in [ft.Full, ft.Dep]))or \
-               (self.flights.domestic(i) and (self.flights.flight_data[i].flight_type == ft.Full)):
+            if (not self.flights.domestic(i) and (self.flights.flight_schedule[i].flight_type in [ft.Full, ft.Dep]))or \
+               (self.flights.domestic(i) and (self.flights.flight_schedule[i].flight_type == ft.Full)):
                 # Non-domestic departing flights and "Full" domestic flights.
                 q = 1
                 for k in range(self.airport.n_bays):
@@ -285,7 +323,7 @@ class BayAssignment:
                         # Add new line if necessary
                         if len(d.split("\n")[-1]) > self.line_width_limit:
                             d += "\n"
-            elif self.flights.domestic(i) and (self.flights.flight_data[i].flight_type == ft.Dep):
+            elif self.flights.domestic(i) and (self.flights.flight_schedule[i].flight_type == ft.Dep):
                 # Long stay departing domestic flight.
                 q = 2
                 for k in range(self.airport.n_bays):
@@ -299,6 +337,7 @@ class BayAssignment:
                 c += "fc_{}: {} = 1;".format(i, d)
             elif q == 2:
                 c += "fc_{}: {} >= 1;".format(i, d)
+        c += "\n"
         return c
 
     def constraint_splitted_flight(self):
@@ -307,11 +346,47 @@ class BayAssignment:
         :return: Splitted flight constraints.
         """
 
-        c = "// Splitted constraints"
+        c = "// Splitted constraints\n    "
 
+        for i in range(self.flights.n_flights):
+            if self.flights.flight_schedule[i].flight_type == ft.Arr:
+                for k in range(self.airport.n_bays):
+                    c += "sp_{}_{}: {} - {} - {} + {} = 0;\n".format(i, k,
+                                                                     self.x(i, k), self.x(i + 1, k),
+                                                                     self.v(i, k), self.w(i + 1, k))
+                    c += "sp_{}_{}: {} - {} - {} + {} = 0;\n".format(i, k,
+                                                                     self.x(i + 1, k), self.x(i + 2, k),
+                                                                     self.v(i + 1, k), self.w(i + 2, k))
+        c += "\n"
+        return c
 
+    def constraint_adjacency(self):
+        """
+        This is a soft constraint to optimize gate usage. Bays 10 and 11 can only
+        be loaded from gate 10 and bays 5 and 6 from gate 5. Because of this we want
+        it is only possible to board bays 10/11, 5/6 one at a time from the gate, so
+        the second flight would have to be bussed.
+        This constraint prevents two departing time conflicting flights to be placed
+        adjacent to each on these bays. However it's not a hard constraint, since a
+        hard constraint would move the conflicting flight to a remote bay, which would
+        be worse.
 
+        :return: Adjacency constrains
+        """
+        c = "// Adjacency constraint\n"
 
-
-
-
+        # Loop through each pair of bays with adjacency constrains.
+        for bay_1, bay_2 in self.flights.adjacency:
+            # Loop through all combinations of flights.
+            for i, flight_1 in enumerate(self.flights.flight_schedule):
+                for j, flight_2 in enumerate(self.flights.flight_schedule):
+                    if i != j:
+                        # Only create the constraint for departing time conflicting flights.
+                        if (flight_1.flight_type == ft.Dep) and (flight_2.flight_type == ft.Dep):
+                            if self.flights.time_conflict(i, j):
+                                c += "ad_{}_{}_{}: {} + {} - {} <= 1;\n".format(bay_1, i, j,
+                                                                                self.x(i, bay_1),
+                                                                                self.x(j, bay_2),
+                                                                                self.s(bay_1, i, j))
+        c += "\n"
+        return c

@@ -30,6 +30,14 @@ FlightType = namedtuple("FlightType",
 Named tuple used to hold flight information
 """
 
+PreferenceType = namedtuple("PreferenceType",
+                            ("dest",
+                             "bays",
+                             "gates"))
+"""
+Named tuple used to hold flight preference information.
+"""
+
 
 class ft(Enum):
     """
@@ -63,17 +71,27 @@ class Flights:
         # current working directory.
         flight_data_path = abspath(flight_data_path)
 
-        self.flight_data_path = normpath(join(flight_data_path, "flight_data.csv"))
+        self.flight_data_path = normpath(join(flight_data_path, "flight_schedule.csv"))
         """Path to csv file holing the flight data."""
 
-        self.flight_data = []
+        self.preferences_path = normpath(join(flight_data_path, "preferences.csv"))
+        """Path to csv file holing the flight bay and gate preference table."""
+
+        self.adjacency_path = normpath(join(flight_data_path, "adjacency.csv"))
+        """Path to csv file holing the adjacency table."""
+
+        self.flight_schedule = []
+        self.preferences_table = {}
+        self.adjacency = []
 
         # load data
         self.load_flight_data()
+        self.load_preferences()
+        self.load_adjacency()
 
     def load_flight_data(self):
         with open(self.flight_data_path) as f:
-            self.flight_data.clear()
+            self.flight_schedule.clear()
 
             # Read the first line
             # Split the line at the commas
@@ -92,7 +110,7 @@ class Flights:
                            "dest",
                            "etd",
                            "ac_type"]:
-                raise Exception("Invalid flight_data csv file '{}'.".format(self.flight_data_path))
+                raise Exception("Invalid flight schedule csv file '{}'.".format(self.flight_data_path))
 
             # Read line by line.
             for line in f:
@@ -110,12 +128,12 @@ class Flights:
                         # Check whether the airline code was defined in the airlines csv file.
                         if airline_code not in self.airport.airlines:
                             raise Exception("Airline '{}' for flight '{}' is invalid.".format(airline_code,
-                                                                                              len(self.flight_data)))
+                                                                                              len(self.flight_schedule)))
 
                 # If this flight has neither an inbound nor outbound flight number that get the airline from the
                 # last read airline. This happens for park flights and departure flights at the end of the day.
                 if airline_code is None:
-                    airline_code = self.flight_data[-1].airline
+                    airline_code = self.flight_schedule[-1].airline
 
                 flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.
                                     in_flight_no=line_values[1],
@@ -133,16 +151,62 @@ class Flights:
                 # Check if the aircraft type is valid
                 if flight.ac_type not in self.airport.aircraft:
                     raise Exception("Invalid aircraft type '{}' for flight '{}'.".format(flight.ac_type,
-                                                                                         len(self.flight_data)))
+                                                                                         len(self.flight_schedule)))
 
-                self.flight_data.append(flight)
+                self.flight_schedule.append(flight)
+
+    def load_preferences(self):
+        """
+        Loads in data from the preferences csv file.
+        :return:
+        """
+        with open(self.preferences_path) as f:
+            self.preferences_table.clear()
+
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["flight", "dest", "bays", "gates"]:
+                raise Exception("Invalid preferences csv file '{}'.".format(self.preferences_path))
+
+            # Read line by line
+            for line in f:
+                # Split and strip values.
+                line_values = [x.strip() for x in line.split(",")]
+
+                preference = PreferenceType(dest=line_values[1],
+                                            bays=tuple([self.airport.bay_names.index(x.strip()) for x in line_values[2].split(";")]),
+                                            gates=tuple([self.airport.gate_names.index(x.strip()) for x in line_values[3].split(";")]))
+                self.preferences_table[line_values[0]] = preference
+
+    def load_adjacency(self):
+        with open(self.adjacency_path) as f:
+            self.adjacency.clear()
+
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["bay_1", "bay_2"]:
+                raise Exception("Invalid adjacency csv file '{}'.".format(self.adjacency_path))
+
+            # Read line by line
+            for line in f:
+                # Split and strip line. Then get the bay indices.
+                line_values = (self.airport.bay_names.index(x.strip()) for x in line.split(","))
+                self.adjacency.append(tuple(line_values))
 
     @property
     def n_flights(self):
         """
         Number of flights.
         """
-        return len(self.flight_data)
+        return len(self.flight_schedule)
 
     def n_passengers(self, i):
         """
@@ -151,7 +215,7 @@ class Flights:
         :return: Number of passengers per flight.
         :rtype: int
         """
-        flight = self.flight_data[i]
+        flight = self.flight_schedule[i]
         return self.airport.aircraft[flight.ac_type].n_passengers
 
     def airline(self, i):
@@ -162,10 +226,10 @@ class Flights:
         """
         # First check the inbound flight number for the airline code.
         # If there is no inbound flight number than check the outbound.
-        if self.flight_data[i].airline is None:
+        if self.flight_schedule[i].airline is None:
             raise Exception("Flight '{}' has neither in inbound or outbound flight number.".format(i))
         else:
-            return self.flight_data[i].airline
+            return self.flight_schedule[i].airline
 
     def terminal(self, i):
         """
@@ -193,17 +257,17 @@ class Flights:
         :rtype: bool
         """
 
-        if self.flight_data[i].flight_type in [ft.Full, ft.Arr]:
+        if self.flight_schedule[i].flight_type in [ft.Full, ft.Arr]:
             # If this a full flight or arrival, check the origin
             # airport first. If no origin airport was given check
             # the destination airport.
-            airport_codes = [self.flight_data[i].origin,
-                             self.flight_data[i].dest]
+            airport_codes = [self.flight_schedule[i].origin,
+                             self.flight_schedule[i].dest]
         else:
             # If this is a parking or departure flight, then check
             # the destination first. If it's missing check the origin.
-            airport_codes = [self.flight_data[i].dest,
-                             self.flight_data[i].origin]
+            airport_codes = [self.flight_schedule[i].dest,
+                             self.flight_schedule[i].origin]
 
         for airport_code in airport_codes:
             if airport_code is not None:
@@ -220,8 +284,8 @@ class Flights:
         :return: Returns True if the two fights conflict in time.
         """
 
-        fi = self.flight_data[i]
-        fj = self.flight_data[j]
+        fi = self.flight_schedule[i]
+        fj = self.flight_schedule[j]
 
         return ((fi.eta < fj.eta) and (fj.eta < fi.etd)) or \
                ((fi.eta < fj.etd) and (fj.etd < fi.etd))
@@ -232,5 +296,5 @@ class Flights:
         :param int k: Bay index
         :return: True if the aircraft type for this flight complies with the bay used.
         """
-        ac_group = self.airport.aircraft[self.flight_data[i].ac_type].group
+        ac_group = self.airport.aircraft[self.flight_schedule[i].ac_type].group
         return self.airport.bay_compliance_matrix[k][ac_group]

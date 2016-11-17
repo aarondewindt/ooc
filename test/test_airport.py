@@ -101,6 +101,10 @@ class TestAirport(unittest.TestCase):
         self.assertIs(airport.fueling[0], True)
         self.assertIs(airport.fueling[33], False)
 
+    def test_load_gates(self):
+        airport = Airport(abs_path("./airport_data"))
+        self.assertIn("18", airport.gate_names)
+
     def test_terminal_bay_distance(self):
         airport = Airport(abs_path("./airport_data"))
         self.assertAlmostEqual(airport.terminal_bay_distance("A", 0), 19)
