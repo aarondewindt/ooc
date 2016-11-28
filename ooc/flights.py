@@ -25,7 +25,8 @@ FlightType = namedtuple("FlightType",
                          "dest",
                          "etd",
                          "ac_type",
-                         "airline"))
+                         "airline",
+                         "preference"))
 """
 Named tuple used to hold flight information
 """
@@ -85,8 +86,8 @@ class Flights:
         self.adjacency = []
 
         # load data
-        self.load_flight_data()
         self.load_preferences()
+        self.load_flight_data()
         self.load_adjacency()
 
     def load_flight_data(self):
@@ -135,6 +136,19 @@ class Flights:
                 if airline_code is None:
                     airline_code = self.flight_schedule[-1].airline
 
+                # Find flight preference.
+                flight_nos = [line_values[1], line_values[7]]
+                flight_preference = None
+                for flight_no in flight_nos:
+                    if flight_no is None:
+                        continue
+                    for flight_pref_no in self.preferences_table:
+                        if flight_no.startswith(flight_pref_no) and line_values[8] == self.preferences_table[flight_pref_no].dest:
+                            flight_preference = self.preferences_table[flight_pref_no]
+                            break
+                    if flight_preference is not None:
+                        break
+
                 flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.
                                     in_flight_no=line_values[1],
                                     origin=line_values[2],
@@ -146,7 +160,8 @@ class Flights:
                                     dest=line_values[8],
                                     etd=time(*[int(x) for x in line_values[9].split(":")]),  # create time obj from etd
                                     ac_type=line_values[10],
-                                    airline=airline_code)
+                                    airline=airline_code,
+                                    preference=flight_preference)
 
                 # Check if the aircraft type is valid
                 if flight.ac_type not in self.airport.aircraft:
@@ -240,15 +255,6 @@ class Flights:
         airline_code = self.airline(i)
         return self.airport.airlines[airline_code].terminal
 
-    def preference(self, i, k):
-        """
-        :param int i: Flight index
-        :return: Preference of flight bay combination.
-        :rtype: float
-        """
-        # TODO: Figure this one out.
-        return 1
-
     def domestic(self, i):
         """
         Derived from airport code in raw airport_data. It first checks the origin airport. If no
@@ -277,6 +283,14 @@ class Flights:
         # airport was given.
         raise Exception("Flight '{}' has neither a origin or outbound airport.")
 
+    def departing(self, i):
+        """
+        :param i: Flight index
+        :return: Boolean indicating whether this is a departing flight.
+        """
+        return self.flight_schedule[i].flight_type in [ft.Full, ft.Dep] and \
+               self.flight_schedule[i].out_flight_no is not None
+
     def time_conflict(self, i, j):
         """
         :param i: Index of first flight
@@ -287,14 +301,52 @@ class Flights:
         fi = self.flight_schedule[i]
         fj = self.flight_schedule[j]
 
-        return ((fi.eta < fj.eta) and (fj.eta < fi.etd)) or \
-               ((fi.eta < fj.etd) and (fj.etd < fi.etd))
+        # Some long stay flights are parked during the night to the next day.
+        if (fi.eta < fi.etd) and (fj.eta < fj.etd):
+            # Neither is a overnight flight.
+            return (fi.eta <= fj.etd) and (fj.eta <= fi.etd)
+
+        elif (fi.eta >= fi.etd) and (fj.eta <= fj.etd):
+            # flight i is an overnight flight.
+            return (fi.eta <= fj.etd) or (fj.eta <= fi.etd)
+
+        elif (fi.eta <= fi.etd) and (fj.eta >= fj.etd):
+            # flight j is an overnight flight.
+            return (fj.eta <= fi.etd) or (fi.eta <= fj.etd)
+
+        else:
+            # Both are overnight flights, so they are time conflicting.
+            return True
 
     def bay_compliance(self, i, k):
         """
-        :param int i: FLight index
+        :param int i: Flight index
         :param int k: Bay index
         :return: True if the aircraft type for this flight complies with the bay used.
         """
         ac_group = self.airport.aircraft[self.flight_schedule[i].ac_type].group
         return self.airport.bay_compliance_matrix[k][ac_group]
+
+    def is_overnight(self, i):
+        """
+        :param i: Flight id
+        :return: A boolean indicating whether a flight is an overnight flight or not.
+        """
+        f = self.flight_schedule[i]
+        if f.flight_type == ft.Full:
+            return f.etd < f.eta
+        if f.flight_type == ft.Arr:
+            return (f.etd < f.eta) or \
+                   (self.flight_schedule[i+1].etd < self.flight_schedule[i+1].eta) or \
+                   (self.flight_schedule[i+2].etd < self.flight_schedule[i+2].eta)
+
+    def beta(self):
+        beta = 0
+        for i in range(self.n_flights):
+            max_distance = self.airport.max_distance[self.terminal(i)]
+            n_passengers = self.n_passengers(i)
+            beta += max_distance * n_passengers
+        return beta
+
+    def gamma(self):
+        return self.beta() * 3

@@ -105,6 +105,11 @@ class TestAirport(unittest.TestCase):
         airport = Airport(abs_path("./airport_data"))
         self.assertIn("18", airport.gate_names)
 
+    def test_max_distance(self):
+        airport = Airport(abs_path("./airport_data"))
+
+        print(airport.max_distance)
+
     def test_terminal_bay_distance(self):
         airport = Airport(abs_path("./airport_data"))
         self.assertAlmostEqual(airport.terminal_bay_distance("A", 0), 19)

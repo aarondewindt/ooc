@@ -17,7 +17,7 @@ class BayAssignment:
        the total number of lines.
     """
 
-    def __init__(self, flights, compact=True, line_width_limit=120):
+    def __init__(self, flights, compact=True, line_width_limit=120, cplex=True):
         self.airport = flights.airport
         """"
         class:`ooc.Airport` object of holding the information of
@@ -69,12 +69,12 @@ class BayAssignment:
         Weight for the passenger transport distance objective function.
         """
 
-        self.beta = 1
+        self.beta = self.flights.beta()
         """
         Weight for the airline preference objective function.
         """
 
-        self.gamma = 1
+        self.gamma = self.flights.gamma()
         """
         Weight for the penalties.
         """
@@ -86,13 +86,49 @@ class BayAssignment:
         been written.
         """
 
+        self.cplex = True
+
+    def save_lp_file(self, path):
+        with open(path, "w") as f:
+            f.write(self.lp_code())
+
     def lp_code(self):
         """
         :return: lp solve code for solving the bay assignment problem
         """
 
-        code = "{}\n{}\n".format(self.objective_function(),
-                                 self.binary_decision_variables_declaration())
+        constraint_single_time_slot = self.constraint_single_time_slot()
+        constraint_single_bay_compliance = self.constraint_single_bay_compliance()
+        constraint_fueling = self.constraint_fueling()
+        # constraint_splitted_flight = self.constraint_splitted_flight()
+        # constraint_adjacency = self.constraint_adjacency()
+        objective_function = self.objective_function()
+        binary_decision_variables_declaration = self.binary_decision_variables_declaration()
+
+        if self.cplex:
+            code = "\n".join([
+                objective_function,
+                "\nSubject To\n",
+                constraint_single_time_slot,
+                constraint_single_bay_compliance,
+                constraint_fueling,
+                # constraint_splitted_flight,
+                # constraint_adjacency,
+                "\nBINARY\n",
+                binary_decision_variables_declaration,
+                "\nEND\n"
+            ])
+            code = code.replace(";", "").replace(",", "").replace("//", "\\")
+        else:
+            code = "\n".join([
+                objective_function,
+                constraint_single_time_slot,
+                constraint_single_bay_compliance,
+                constraint_fueling,
+                # constraint_splitted_flight,
+                # constraint_adjacency,
+                binary_decision_variables_declaration,
+            ])
 
         return code
 
@@ -121,7 +157,7 @@ class BayAssignment:
                 # and add it to the objective function.
                 # Note that all of these factors are negative. This is because
                 # we want to minimize this objective function.
-                z1 += " -{:15.4f} {:10s}".format(constant, self.x(i, k))
+                z1 += " +{:<15.4f} {:10s}".format(constant, self.x(i, k))
 
                 # Add new line if necessary
                 if (not self.compact) or (len(z1.split("\n")[-1]) > self.line_width_limit):
@@ -132,40 +168,52 @@ class BayAssignment:
 
     def of_max_airline_preference(self):
         """
+        Thi objective function will add a term for each not-preferred bay assignment.
         :return: Objective function for maximizing airline bay preference.
         :rtype: string
         """
         # Initialize empty string that will hold the objective function.
         z2 = "// Maximization of airline preference\n    "
 
-        # Loop through all flight and bay combinations.
+        # Loop through all flight that have a preference.
         for i in range(self.flights.n_flights):
-            for k in range(self.airport.n_bays):
-                # Calculate the constant for this decision variable.
-                # This constant is the flight-bay preference multiplied
-                # by this objective function's weight `beta`.
-                constant = self.flights.preference(i, k) \
-                           * self.beta
+            if self.flights.flight_schedule[i].preference is not None:
+                # Add a term for each bay the flight has preference for.
+                for k in range(self.airport.n_bays):
+                    if k not in self.flights.flight_schedule[i].preference.bays:
+                        # The constant will just be the objective function's weight factor.
+                        constant = self.beta
 
-                # Generate string with the decision variable and it's constant
-                # and add it to the objective function.
-                z2 += " +{:15.4f} {:10s}".format(constant, self.x(i, k))
+                        # Generate string with the decision variable and it's constant
+                        # and add it to the objective function.
+                        z2 += " +{:<15.4f} {:10s}".format(constant, self.x(i, k))
 
-                # Add new line if necessary
-                if (not self.compact) or (len(z2.split("\n")[-1]) > self.line_width_limit):
-                    z2 = z2.rstrip()
-                    z2 += "\n    "
-
+                        # Add new line if necessary
+                        if (not self.compact) or (len(z2.split("\n")[-1]) > self.line_width_limit):
+                            z2 = z2.rstrip()
+                            z2 += "\n    "
         return z2
 
     def penalty_values(self):
         """
-        :return: Objective function with the summation of all penalty values U, V, W.
+        :return: Objective function with the summation of all penalty values U, V, W and S.
         """
-        return "// Penalty values\n" \
-               "    +{constant:10.4f} U \n" \
-               "    +{constant:10.4f} V \n" \
-               "    +{constant:10.4f} W \n".format(constant=self.gamma)
+        # self.u_list + self.v_list + self.w_list+ self.s_list:
+
+        of = "// Penalty values.\n   "
+        for penalty_name in self.s_list:
+            # The constant will just be the objective function's weight factor.
+            constant = self.gamma
+
+            # Generate string with the penalty value and it's constant
+            # and add it to the objective function.
+            of += " +{:<15.4f} {:10s}".format(constant, penalty_name)
+
+            # Add new line if necessary
+            if (not self.compact) or (len(of.split("\n")[-1]) > self.line_width_limit):
+                of = of.rstrip()
+                of += "\n   "
+        return of + "\n"
 
     def objective_function(self):
         """
@@ -175,9 +223,14 @@ class BayAssignment:
         # Create total objective function by concatenating the individual objective
         # objective functions with newlines in between and adding `max:` and `;` to
         # the front and back.
-        return "max:\n{}\n\n{}\n{};\n".format(self.of_min_passenger_transport_distance(),
-                                              self.of_max_airline_preference(),
-                                              self.penalty_values())
+        if self.cplex:
+            return "Minimize\n{}\n\n{}\n{}\n".format(self.of_min_passenger_transport_distance(),
+                                                      self.of_max_airline_preference(),
+                                                      self.penalty_values())
+        else:
+            return "min:\n{}\n\n{}\n{};\n".format(self.of_min_passenger_transport_distance(),
+                                                  self.of_max_airline_preference(),
+                                                  self.penalty_values())
 
     def binary_decision_variables_declaration(self):
         """
@@ -188,14 +241,20 @@ class BayAssignment:
             # If there are no variables in the list generate the objective function to generate them.
             self.objective_function()
 
-        s = "// Binary decision variables declaration\nbinary\n   "
-        for name in self.x_list:
-            s += " {:10s},".format(name)
+        if self.cplex:
+            s = ""
+        else:
+            s = "// Binary decision variables declaration\nbinary\n   "
+        for name in self.x_list + self.s_list:
+            if self.cplex:
+                s += " {:10s}".format(name)
+            else:
+                s += " {:10s},".format(name)
             # Add new line if necessary
             if len(s.split("\n")[-1]) > self.line_width_limit:
                 s += "\n   "
         # Remove last comma and replace it by a semicolon to close the binary block.
-        s = s[:-2] + ";"
+        s = s[:-2] + ";\n\n"
         return s
 
     def x(self, i, k):
@@ -214,6 +273,18 @@ class BayAssignment:
         if name not in self.x_list:
             self.x_list.append(name)
 
+        return name
+
+    def u(self, i, k):
+        """
+        :param i: Flight index
+        :param k: Bay index
+        :return: Name of the penalty value with the number of night towings.
+        :rtype: string
+        """
+        name = "U_{}_{}".format(i, k)
+        if name not in self.u_list:
+            self.u_list.append(name)
         return name
 
     def v(self, i, k):
@@ -239,7 +310,7 @@ class BayAssignment:
             self.w_list.append(name)
         return name
 
-    def s(self, k, i, j):
+    def s(self, i, j, k):
         """
 
         :param k: Bay index
@@ -247,7 +318,7 @@ class BayAssignment:
         :param j: Flight 2 index
         :return: Name of the adjacency soft constraint penalty value.
         """
-        name = "S_{}_{}".format(i, k)
+        name = "S_{}_{}_{}".format(i, j, k)
         if name not in self.s_list:
             self.s_list.append(name)
         return name
@@ -262,12 +333,12 @@ class BayAssignment:
         c = "// Single time slot constraints.\n"
 
         for i in range(self.flights.n_flights):
-            for j in range(self.flights.n_flights):
+            for j in range(i + 1, self.flights.n_flights):
                 for k in range(self.airport.n_bays):
-                    if i != j and self.flights.time_conflict(i, j):
-                        c += "tc_{}_{}: {:10s} + {:10s} <= 1;\n".format(i, j,
-                                                                        self.x(i, k),
-                                                                        self.x(j, k))
+                    if self.flights.time_conflict(i, j):
+                        c += "tc_{}_{}_{}: {:10s} + {:10s} <= 1;\n".format(i, j, k,
+                                                                           self.x(i, k),
+                                                                           self.x(j, k))
         c += "\n"
         return c
 
@@ -283,7 +354,7 @@ class BayAssignment:
         c = "// Bay compliance and single bay per aircraft Constraint.\n"
 
         for i in range(self.flights.n_flights):
-            c += "bc_{}:".format(i)
+            c += "bc_{}:\n".format(i)
             for k in range(self.airport.n_bays):
                 if self.flights.bay_compliance(i, k):
                     c += " + {:10s}".format(self.x(i, k))
@@ -306,15 +377,16 @@ class BayAssignment:
         # one are the long stay departing flights. This is done like this because
         # it's assumed that domestic flights can be fueled in the parking phase.
 
-        c = "// Fueling constrains"
+        c = "// Fueling constrains\n"
 
         for i in range(self.flights.n_flights):
             # I'm way to tired right now to come up with names for these, so random letters.
             d = ""  # Holds the content of the the constraint for this flight
             q = 0  # If 0, no constraint. If 1, dep non-domestic or full domestic. If 2, dep domestic.
 
-            if (not self.flights.domestic(i) and (self.flights.flight_schedule[i].flight_type in [ft.Full, ft.Dep]))or \
-               (self.flights.domestic(i) and (self.flights.flight_schedule[i].flight_type == ft.Full)):
+            if (not self.flights.domestic(i) and (self.flights.flight_schedule[i].out_flight_no is not None))or \
+               (self.flights.domestic(i) and (self.flights.flight_schedule[i].flight_type == ft.Full and
+                                              (self.flights.flight_schedule[i].out_flight_no is not None))):
                 # Non-domestic departing flights and "Full" domestic flights.
                 q = 1
                 for k in range(self.airport.n_bays):
@@ -323,40 +395,62 @@ class BayAssignment:
                         # Add new line if necessary
                         if len(d.split("\n")[-1]) > self.line_width_limit:
                             d += "\n"
-            elif self.flights.domestic(i) and (self.flights.flight_schedule[i].flight_type == ft.Dep):
+            elif self.flights.domestic(i) and (self.flights.flight_schedule[i].out_flight_no is not None):
                 # Long stay departing domestic flight.
                 q = 2
                 for k in range(self.airport.n_bays):
                     if self.airport.fueling[k]:
                         d += " + {} + {}".format(self.x(i, k),
-                                                 self.x(j, k))
+                                                 self.x(i - 1, k))
                         # Add new line if necessary
                         if len(d.split("\n")[-1]) > self.line_width_limit:
                             d += "\n"
             if q == 1:
-                c += "fc_{}: {} = 1;".format(i, d)
+                c += "fc_{}:\n{} = 1;\n".format(i, d)
             elif q == 2:
-                c += "fc_{}: {} >= 1;".format(i, d)
+                c += "fc_{}:\n{} >= 1;\n".format(i, d)
         c += "\n"
         return c
 
     def constraint_splitted_flight(self):
         """
         These are soft constraints to limit the number of towings for splitted flights.
+        For some long stay overnight night flights the aircraft can be placed on the
+        preferred bay the night before. For these the contrains are diffrent and an
+        extra one is added in order o make sure the destination flight is placed at
+        the prefered bay.
         :return: Splitted flight constraints.
         """
 
-        c = "// Splitted constraints\n    "
+        c = "// Splitted constraints\n"
 
         for i in range(self.flights.n_flights):
             if self.flights.flight_schedule[i].flight_type == ft.Arr:
-                for k in range(self.airport.n_bays):
-                    c += "sp_{}_{}: {} - {} - {} + {} = 0;\n".format(i, k,
-                                                                     self.x(i, k), self.x(i + 1, k),
-                                                                     self.v(i, k), self.w(i + 1, k))
-                    c += "sp_{}_{}: {} - {} - {} + {} = 0;\n".format(i, k,
-                                                                     self.x(i + 1, k), self.x(i + 2, k),
-                                                                     self.v(i + 1, k), self.w(i + 2, k))
+                # This is a long stay flight.
+                if self.flights.is_overnight(i) and \
+                   (self.flights.flight_schedule[i+2].preference is not None):
+                    # If this is a long stay overnight flight with preference.
+                    k_preferred = self.flights.flight_schedule[i+2].preference.bays[0]
+                    c += "sp_{}_{}: {} - {} - {} = 0;\n".format(i+1, k_preferred,
+                                                                self.x(i+2, k_preferred),
+                                                                self.x(i+1, k_preferred),
+                                                                self.u(i+1, k_preferred))
+                    c += "sp_{}_{}: {} - {} - {} + {} = 0;\n".format(i, k_preferred,
+                                                                     self.x(i + 2, k_preferred),
+                                                                     self.x(i + 1, k_preferred),
+                                                                     self.u(i, k_preferred),
+                                                                     self.w(i + 1, k_preferred))
+                    c += "nt_{}_{}: {} = 1;".format(i+2, k_preferred, self.x(i+2, k_preferred))
+
+                else:
+                    # Anything else.
+                    for k in range(self.airport.n_bays):
+                        c += "sp_{}_{}: {} - {} - {} + {} = 0;\n".format(i, k,
+                                                                         self.x(i, k), self.x(i + 1, k),
+                                                                         self.v(i, k), self.w(i + 1, k))
+                        c += "sp_{}_{}: {} - {} - {} + {} = 0;\n".format(i+1, k,
+                                                                         self.x(i + 1, k), self.x(i + 2, k),
+                                                                         self.v(i + 1, k), self.w(i + 2, k))
         c += "\n"
         return c
 
@@ -378,15 +472,16 @@ class BayAssignment:
         # Loop through each pair of bays with adjacency constrains.
         for bay_1, bay_2 in self.flights.adjacency:
             # Loop through all combinations of flights.
-            for i, flight_1 in enumerate(self.flights.flight_schedule):
-                for j, flight_2 in enumerate(self.flights.flight_schedule):
-                    if i != j:
-                        # Only create the constraint for departing time conflicting flights.
-                        if (flight_1.flight_type == ft.Dep) and (flight_2.flight_type == ft.Dep):
-                            if self.flights.time_conflict(i, j):
-                                c += "ad_{}_{}_{}: {} + {} - {} <= 1;\n".format(bay_1, i, j,
-                                                                                self.x(i, bay_1),
-                                                                                self.x(j, bay_2),
-                                                                                self.s(bay_1, i, j))
+            for i in range(self.flights.n_flights):
+                flight_i = self.flights.flight_schedule[i]
+                for j in range(i + 1, self.flights.n_flights):
+                    flight_j = self.flights.flight_schedule[j]
+                    # Only create the constraint for departing time conflicting flights.
+                    if self.flights.departing(i) and self.flights.departing(i):
+                        if self.flights.time_conflict(i, j):
+                            c += "ad_{}_{}_{}: {} + {} - {} <= 1;\n".format(bay_1, i, j,
+                                                                            self.x(i, bay_1),
+                                                                            self.x(j, bay_2),
+                                                                            self.s(i, j, bay_1))
         c += "\n"
         return c

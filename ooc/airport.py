@@ -60,6 +60,7 @@ class Airport:
         self.terminal_names = []  #: List holding the terminal names.
         self.domestic_airports = []  #: List of domestic airports.
         self.fueling = []  #: List containing booleans indicating whether a bay has fueling pits or not.
+        self.max_distance = {}  #: Dictionary holding the maximum distance per terminal.
 
         # Load in data
         self.load_aircraft()
@@ -173,6 +174,7 @@ class Airport:
             # length of self.bay_names.
             self._bay_terminal_distance = [None] * len(self.bay_names)
             self.terminal_names.clear()
+            self.max_distance.clear()
 
             # Read the heading
             heading = [x.strip() for x in f.readline().split(",")]
@@ -182,6 +184,7 @@ class Airport:
             # by this heading.
 
             self.terminal_names = heading[1:]
+            self.max_distance = OrderedDict(zip(self.terminal_names, [0]*len(self.terminal_names)))
 
             # Read line by line.
             for line in f:
@@ -198,6 +201,10 @@ class Airport:
                 # bay_info = [int(x) for x in line_values[1:]]
                 bay_info = OrderedDict(zip(self.terminal_names,
                                            [float(x) for x in line_values[1:]]))
+
+                for terminal_name, distance in bay_info.items():
+                    if self.max_distance[terminal_name] < distance:
+                        self.max_distance[terminal_name] = distance
 
                 # Add it to the bay compliance dict.
                 self._bay_terminal_distance[bay_index] = bay_info

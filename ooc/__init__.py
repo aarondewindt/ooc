@@ -6,3 +6,4 @@ from ooc.airport import Airport
 from ooc.flights import Flights, ft
 from ooc.bay_assignment import BayAssignment
 from ooc.gate_assignment import GateAssignment
+from ooc.bay_gate_solver import BayGateSolver

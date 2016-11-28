@@ -15,27 +15,103 @@ def abs_path(rel_path):
 
 class MyTestCase(unittest.TestCase):
 
-    @unittest.skip
-    def test_something(self):
-        airport = Airport(abs_path("./airport_data"))
-        flights = Flights(abs_path("./flight_data"), airport)
-        bay_assignment = BayAssignment(flights)
-
-        of = bay_assignment.objective_function()
-        self.assertIn(objective_function_part_1, of)
-        self.assertIn(objective_function_part_2, of)
-
-    @unittest.skip
     def test_lp_code(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data"), airport)
         bay_assignment = BayAssignment(flights)
 
         code = bay_assignment.lp_code()
-        self.assertIn(objective_function_part_1, code)
-        self.assertIn(objective_function_part_2, code)
-        self.assertIn(binary_declaration_part_1, code)
-        self.assertIn(binary_declaration_part_2, code)
+        # print(code)
+
+        bay_assignment.save_lp_file("ba.lp")
+        # self.assertIn(objective_function_part_1, code)
+        # self.assertIn(objective_function_part_2, code)
+        # self.assertIn(binary_declaration_part_1, code)
+        # self.assertIn(binary_declaration_part_2, code)
+
+    def test_of_max_airline_preference(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+
+        code = bay_assignment.of_max_airline_preference()
+        print(code)
+
+    def test_constraint_single_time_slot(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+
+        code = bay_assignment.constraint_single_time_slot()
+        # print(code)
+        # self.assertIn(single_time_slot_correct, code)
+
+    def test_constraint_single_bay_compliance(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+
+        code = bay_assignment.constraint_single_bay_compliance()
+        # print(code)
+
+    def test_constraint_fueling(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+
+        code = bay_assignment.constraint_fueling()
+        # print(code)
+
+    def test_constraint_splitted_flight(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+
+        code = bay_assignment.constraint_splitted_flight()
+        # print(code)
+
+    def test_constraint_adjacency(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+
+        code = bay_assignment.constraint_adjacency()
+        # print(code)
+
+    def test_weights(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+        # print(bay_assignment.alpha)
+        # print(bay_assignment.beta)
+        # print(bay_assignment.gamma)
+
+    def test_penalty_values(self):
+        airport = Airport(abs_path("./airport_data"))
+        flights = Flights(abs_path("./flight_data_small"), airport)
+        bay_assignment = BayAssignment(flights)
+
+        bay_assignment.constraint_adjacency()
+        bay_assignment.constraint_splitted_flight()
+        code = bay_assignment.penalty_values()
+        # print(code)
+
+
+single_time_slot_correct = """// Single time slot constraints.
+tc_0_5_0: X_0_0      + X_5_0      <= 1;
+tc_0_5_1: X_0_1      + X_5_1      <= 1;
+tc_0_5_2: X_0_2      + X_5_2      <= 1;
+tc_0_5_3: X_0_3      + X_5_3      <= 1;
+tc_0_5_4: X_0_4      + X_5_4      <= 1;
+tc_0_5_5: X_0_5      + X_5_5      <= 1;
+tc_0_5_6: X_0_6      + X_5_6      <= 1;
+tc_0_5_7: X_0_7      + X_5_7      <= 1;
+tc_0_5_8: X_0_8      + X_5_8      <= 1;
+tc_0_5_9: X_0_9      + X_5_9      <= 1;
+tc_0_5_10: X_0_10     + X_5_10     <= 1;
+tc_0_5_11: X_0_11     + X_5_11     <= 1;
+tc_0_5_12: X_0_12     + X_5_12     <= 1;"""
+
 
 
 objective_function_part_1 = """max:
