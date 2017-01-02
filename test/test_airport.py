@@ -7,6 +7,7 @@ from ooc import Airport
 def abs_path(rel_path):
     """
     Returns an absolute path to a file relative to this file.
+
     :param rel_path: PAth relative to this file
     :return: Absolute path
     """

@@ -26,7 +26,8 @@ FlightType = namedtuple("FlightType",
                          "etd",
                          "ac_type",
                          "airline",
-                         "preference"))
+                         "preference",
+                         "current"))
 """
 Named tuple used to hold flight information
 """
@@ -37,6 +38,12 @@ PreferenceType = namedtuple("PreferenceType",
                              "gates"))
 """
 Named tuple used to hold flight preference information.
+"""
+
+CurrentType = namedtuple("CurrentType",
+                         ("bay",))
+"""
+Named tuple used to hold the current location of overnight flights.
 """
 
 
@@ -81,11 +88,16 @@ class Flights:
         self.adjacency_path = normpath(join(flight_data_path, "adjacency.csv"))
         """Path to csv file holing the adjacency table."""
 
+        self.current_path = normpath(join(flight_data_path, "current.csv"))
+        """Path to the csv file holding the position of the current location of overnight flights."""
+
         self.flight_schedule = []
         self.preferences_table = {}
         self.adjacency = []
+        self.current_table = {}
 
         # load data
+        self.load_current()
         self.load_preferences()
         self.load_flight_data()
         self.load_adjacency()
@@ -131,8 +143,8 @@ class Flights:
                             raise Exception("Airline '{}' for flight '{}' is invalid.".format(airline_code,
                                                                                               len(self.flight_schedule)))
 
-                # If this flight has neither an inbound nor outbound flight number that get the airline from the
-                # last read airline. This happens for park flights and departure flights at the end of the day.
+                # If this flight has neither an inbound nor outbound flight number, than get the airline code from the
+                # last read flight. This happens for park flights and departure flights at the end of the day.
                 if airline_code is None:
                     airline_code = self.flight_schedule[-1].airline
 
@@ -149,6 +161,15 @@ class Flights:
                     if flight_preference is not None:
                         break
 
+                # Find current location if known.
+                current_location = None
+                for flight_no in [line_values[1], line_values[7]]:
+                    if flight_no is None:
+                        continue
+                    if flight_no in self.current_table:
+                        current_location = self.current_table[flight_no]
+
+                # Create flight object.
                 flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.
                                     in_flight_no=line_values[1],
                                     origin=line_values[2],
@@ -161,7 +182,8 @@ class Flights:
                                     etd=time(*[int(x) for x in line_values[9].split(":")]),  # create time obj from etd
                                     ac_type=line_values[10],
                                     airline=airline_code,
-                                    preference=flight_preference)
+                                    preference=flight_preference,
+                                    current=current_location)
 
                 # Check if the aircraft type is valid
                 if flight.ac_type not in self.airport.aircraft:
@@ -216,6 +238,34 @@ class Flights:
                 line_values = (self.airport.bay_names.index(x.strip()) for x in line.split(","))
                 self.adjacency.append(tuple(line_values))
 
+    def load_current(self):
+        """
+        Loads in data from the current csv file.
+
+        :return:
+        """
+        with open(self.current_path) as f:
+            self.current_table.clear()
+
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["flight", "bay"]:
+                raise Exception("Invalid current csv file '{}'.".format(self.preferences_path))
+
+            # Read line by line
+            for line in f:
+                # Split and strip values.
+                line_values = [x.strip() for x in line.split(",")]
+
+                bay_index = self.airport.bay_names.index(line_values[1].strip())
+
+                current = CurrentType(bay=bay_index)
+                self.current_table[line_values[0]] = current
+
     @property
     def n_flights(self):
         """
@@ -226,6 +276,7 @@ class Flights:
     def n_passengers(self, i):
         """
         This is not loaded from airport_data, but is the maximum capacity of aircraft type.
+
         :param int i: Flight index
         :return: Number of passengers per flight.
         :rtype: int
@@ -249,6 +300,7 @@ class Flights:
     def terminal(self, i):
         """
         Derived from airline group.
+
         :param int i: Flight index
         :return: Terminal index for this flight.
         """
@@ -258,6 +310,7 @@ class Flights:
     def domestic(self, i):
         """
         Derived from airport code in raw airport_data. It first checks the origin airport. If no
+
         :param int i: Flight index
         :return: True if it's a domestic flight
         :rtype: bool

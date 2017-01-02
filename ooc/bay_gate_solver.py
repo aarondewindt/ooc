@@ -46,9 +46,7 @@ class BayGateSolver:
         Path to directory which will hold all of the generated lp files ond solutions.
         """
 
-        # Create the directory if it doesn't exist yet.
-        if not isdir(self.workspace_path):
-            mkdir(self.workspace_path)
+        self.init_workspace()  # Initialize workspace.
 
         # Create a few path to relevant paths.
         self.bay_lp_path = normpath(join(self.workspace_path, "bay.lp"))
@@ -64,6 +62,25 @@ class BayGateSolver:
         except OSError:
             # We can't. We'll have to run the solver manually.
             self.cplex_command = None
+
+    def init_workspace(self):
+        """
+        This function initializes the workspace directory used to store the generated code files and results.
+        """
+
+        # Create the directory if it doesn't exist yet.
+        if not isdir(self.workspace_path):
+            mkdir(self.workspace_path)
+
+        # Create a .gitignore file in the workspace directory in order to let git know
+        # it has to ignore all the generated files in there.
+        if not isfile(join(self.workspace_path, ".gitignore")):
+            with open(join(self.workspace_path, ".gitignore"), "w") as f:
+                # For now ignore everything. At some point I'm gonna change this so it keeps
+                # the final results.
+                f.write("""*""")
+
+
 
     def solve_bay_assignment(self):
         """

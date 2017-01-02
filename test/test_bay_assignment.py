@@ -7,6 +7,7 @@ from ooc import Airport, Flights, BayAssignment
 def abs_path(rel_path):
     """
     Returns an absolute path to a file relative to this file.
+
     :param rel_path: PAth relative to this file
     :return: Absolute path
     """
@@ -17,7 +18,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_lp_code(self):
         airport = Airport(abs_path("./airport_data"))
-        flights = Flights(abs_path("./flight_data"), airport)
+        flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
 
         code = bay_assignment.lp_code()

@@ -274,7 +274,6 @@ class Airport:
             for line in f:
                 self.gate_names.append(line.strip())
 
-
     def terminal_bay_distance(self, term, k):
         """
         :param string term: Terminal name.
