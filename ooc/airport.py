@@ -35,14 +35,22 @@ class Airport:
         # Create paths to individual data files.
         self.airlines_path = normpath(join(airport_data_path, "airlines.csv"))  #: Path to airlines csv file.
         self.aircraft_path = normpath(join(airport_data_path, "aircraft.csv"))  #: Path to aircraft csv file.
+
         self.bay_compliance_matrix_path = normpath(join(airport_data_path, "bay_compliance_matrix.csv"))
         """Path to the bay compliance matrix csv file."""
+
         self.bay_terminal_distance_path = normpath(join(airport_data_path, "bay_terminal_distance.csv"))
         """Path to the bay terminal distance csv file."""
+
         self.domestic_airports_path = normpath(join(airport_data_path, "domestic_airports.csv"))
         """Path to domestic airports csv file."""
+
         self.fueling_path = normpath(join(airport_data_path, "fueling.csv"))  #: Path to fueling csv file.
+
         self.gates_path = normpath(join(airport_data_path, "gates.csv"))  #: Path to fueling csv file.
+
+        self.adjacency_path = normpath(join(airport_data_path, "adjacency.csv"))
+        """Path to csv file holing the adjacency table."""
 
         self.airlines = OrderedDict()  #: Dictionary holding airline information.
         self.aircraft = OrderedDict()  #: Dictionary holding aircraft information.
@@ -61,6 +69,7 @@ class Airport:
         self.domestic_airports = []  #: List of domestic airports.
         self.fueling = []  #: List containing booleans indicating whether a bay has fueling pits or not.
         self.max_distance = {}  #: Dictionary holding the maximum distance per terminal.
+        self.adjacency = []  #: List holding pairs of adjacent bays. Bays that share a gate.
 
         # Load in data
         self.load_aircraft()
@@ -70,6 +79,7 @@ class Airport:
         self.load_domestic_airports()
         self.load_fueling()
         self.load_gates()
+        self.load_adjacency()
 
     def load_airlines(self):
         """
@@ -273,6 +283,25 @@ class Airport:
 
             for line in f:
                 self.gate_names.append(line.strip())
+
+    def load_adjacency(self):
+        with open(self.adjacency_path) as f:
+            self.adjacency.clear()
+
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["bay_1", "bay_2"]:
+                raise Exception("Invalid adjacency csv file '{}'.".format(self.adjacency_path))
+
+            # Read line by line
+            for line in f:
+                # Split and strip line. Then get the bay indices.
+                line_values = (self.bay_names.index(x.strip()) for x in line.split(","))
+                self.adjacency.append(tuple(line_values))
 
     def terminal_bay_distance(self, term, k):
         """

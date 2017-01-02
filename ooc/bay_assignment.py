@@ -7,8 +7,10 @@ class BayAssignment:
 
     :param ooc.Flights flights: Flight object holding the information on all
        the flights of the day.
+
     :param bool compact: True to compact the generated lp code ad reduce
        the total number of lines.
+
     :param int line_width_limit: Suggested line width limit for the generated
        code. The code might exceed this limit since the check is done after
        new snippets have been added to the line, and for in some cases it's
@@ -550,7 +552,7 @@ class BayAssignment:
             for j in range(i + 1, self.flights.n_flights):
 
                 # Loop through each pair of bays with adjacency constrains.
-                for bay_pair in self.flights.adjacency:
+                for bay_pair in self.airport.adjacency:
                     # Convert bay_pair from type tuple to list. This will give a copy we can modify.
                     bay_pair = list(bay_pair)
 

@@ -85,22 +85,17 @@ class Flights:
         self.preferences_path = normpath(join(flight_data_path, "preferences.csv"))
         """Path to csv file holing the flight bay and gate preference table."""
 
-        self.adjacency_path = normpath(join(flight_data_path, "adjacency.csv"))
-        """Path to csv file holing the adjacency table."""
-
         self.current_path = normpath(join(flight_data_path, "current.csv"))
         """Path to the csv file holding the position of the current location of overnight flights."""
 
         self.flight_schedule = []
         self.preferences_table = {}
-        self.adjacency = []
         self.current_table = {}
 
         # load data
         self.load_current()
         self.load_preferences()
         self.load_flight_data()
-        self.load_adjacency()
 
     def load_flight_data(self):
         with open(self.flight_data_path) as f:
@@ -218,25 +213,6 @@ class Flights:
                                             bays=tuple([self.airport.bay_names.index(x.strip()) for x in line_values[2].split(";")]),
                                             gates=tuple([self.airport.gate_names.index(x.strip()) for x in line_values[3].split(";")]))
                 self.preferences_table[line_values[0]] = preference
-
-    def load_adjacency(self):
-        with open(self.adjacency_path) as f:
-            self.adjacency.clear()
-
-            # Read the first line
-            # Split the line at the commas
-            # Strip any leading or trailing spaces, tabs, etc.
-            heading = [x.strip() for x in f.readline().split(",")]
-
-            # Check if the heading is valid.
-            if heading != ["bay_1", "bay_2"]:
-                raise Exception("Invalid adjacency csv file '{}'.".format(self.adjacency_path))
-
-            # Read line by line
-            for line in f:
-                # Split and strip line. Then get the bay indices.
-                line_values = (self.airport.bay_names.index(x.strip()) for x in line.split(","))
-                self.adjacency.append(tuple(line_values))
 
     def load_current(self):
         """
