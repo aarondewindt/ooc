@@ -2,9 +2,10 @@ from os import mkdir, remove, system
 from os.path import isdir, isfile, abspath, normpath, join
 import subprocess
 import sys
+import xml.etree.ElementTree as ET  #: the extra-terrestrial
 
 
-from ooc import Airport, Flights, BayAssignment
+from ooc import Airport, Flights, BayAssignment, FlightSolution
 
 
 class BayGateSolver:
@@ -46,7 +47,10 @@ class BayGateSolver:
         Path to directory which will hold all of the generated lp files ond solutions.
         """
 
+        self.solutions = []  # List holding the final solution.
+
         self.init_workspace()  # Initialize workspace.
+        self.init_solution_list()
 
         # Create a few path to relevant paths.
         self.bay_lp_path = normpath(join(self.workspace_path, "bay.lp"))
@@ -56,8 +60,8 @@ class BayGateSolver:
 
         # Check whether we can access cplex from the command line.
         try:
-            # We can. Store command for later use.
             subprocess.run([cplex_command + " -c help"], shell=True, stdout=subprocess.PIPE)
+            # We can. Store command for later use.
             self.cplex_command = cplex_command
         except OSError:
             # We can't. We'll have to run the solver manually.
@@ -80,12 +84,28 @@ class BayGateSolver:
                 # the final results.
                 f.write("""*""")
 
+    def init_solution_list(self):
+        """
+        Initializes the list that will hold the solution eventually.
+        """
+        for i, flight in enumerate(self.flights.flight_schedule):
+            solution = FlightSolution(i)
+            self.solutions.append(solution)
 
+            solution.flight_type = str(flight.flight_type)
+            solution.in_flight_no = flight.in_flight_no
+            solution.origin = flight.origin
+            solution.eta = flight.eta.strftime("%H:%M")
+            solution.reg_no = flight.reg_no
+            solution.out_flight_no = flight.out_flight_no
+            solution.dest = flight.dest
+            solution.etd = flight.etd.strftime("%H:%M")
+            solution.ac_type = flight.ac_type
 
     def solve_bay_assignment(self):
         """
         Generates the lp code needed to solve the bay assignment,
-        solves it using cplex and loads in solution.
+        solves it using cplex and loads in the solution.
         """
 
         # Generate and save lp code.
@@ -93,7 +113,7 @@ class BayGateSolver:
             f.write(self.bay_assignment.lp_code())
 
         if self.cplex_command is not None:
-            print("solving bay assignment with cplex...")
+            print("Solving bay assignment with cplex...")
             # Remove old solution file
             if isfile(self.bay_sol_path):
                 remove(self.bay_sol_path)
@@ -115,7 +135,49 @@ class BayGateSolver:
                   "Please solve it in cplex and save the resulting .sol file at\n{}\n".format(self.bay_sol_path))
 
     def load_bay_assignment_solution(self):
-        pass
+        # Load in xml file outputted by cplex
+        CPLEXSolution = ET.parse(self.bay_sol_path).getroot()
+
+        variable_elements = CPLEXSolution.findall("variables/variable")
+        for element in variable_elements:
+            # Check whether the variable element is for one of the X decision variables.
+            name = element.get("name")
+            if name.startswith("X"):
+                _, i, k = name.split("_")
+                i = int(i)  # Flight index
+                k = int(k)  # Bay index
+                assigned = bool(int(element.get("value")))  # If True, than flight i has been assigned to bay k.
+                if assigned:
+                    if self.solutions[i].bay_idx is None:
+                        self.solutions[i].bay_idx = k
+                        self.solutions[i].bay = self.airport.bay_names[k]
+                    else:
+                        raise Exception("Flight {} has been assigned to two bays.".format(i))
+
+        # Check whether there is a solution for all flights.
+        for i, solution in enumerate(self.solutions):
+            assert solution.bay is not None, "Flight {} has no bay assigned to it.".format(i)
+
+    def print_solution(self):
+        """
+        Returns a string with the solutions
+
+        :return:
+        """
+
+        s = self.solutions[0].str_heading()
+        for solution in self.solutions:
+            s += solution.str_data()
+
+        print(s)
+
+        print()
+
+        from sys import stdout
+        stdout.write("[")
+        for solution in self.solutions:
+            stdout.write("{}, ".format(solution.bay))
+        stdout.write("]")
 
 
 

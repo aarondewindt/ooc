@@ -10,10 +10,10 @@ setup(
     name='ooc',
     version=main_ns['__version__'],
     description='AE4441-16 Operations Optimization assignment',
-    author='Aaron de Windt, Kyana Shayan, Karlo Rado',
-    author_email='aaron.dewindt@gmail.com, kyana.shayan@gmail.com, k.rado@hotmail.com ',
+    author='Aaron de Windt, Kyana Shayan',
+    author_email='aaron.dewindt@gmail.com, kyana.shayan@gmail.com',
 
-    install_requires=['numpy', 'scipy'],
+    install_requires=['numpy', 'scipy', 'lxml'],
     packages=find_packages('.', exclude=["test"]),
 
     classifiers=[

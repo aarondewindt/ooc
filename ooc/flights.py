@@ -275,13 +275,18 @@ class Flights:
 
     def terminal(self, i):
         """
-        Derived from airline group.
+        Returns the terminal name based on the airline and puts all domestic flights on terminal D.
 
         :param int i: Flight index
         :return: Terminal index for this flight.
         """
-        airline_code = self.airline(i)
-        return self.airport.airlines[airline_code].terminal
+
+        # If it's a domestic flight then put it on terminal D. Otherwise from the terminal information.
+        if self.domestic(i):
+            return "D"
+        else:
+            airline_code = self.airline(i)
+            return self.airport.airlines[airline_code].terminal
 
     def domestic(self, i):
         """

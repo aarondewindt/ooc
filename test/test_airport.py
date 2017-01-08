@@ -24,7 +24,7 @@ class TestAirport(unittest.TestCase):
         self.assertEquals(airport.airlines["KQ"], (0, "A"))
         self.assertEquals(airport.airlines["G9"], (1, "B"))
         self.assertEquals(airport.airlines["EY"], (2, "C"))
-        self.assertEquals(airport.airlines["SA"], (3, "D"))
+        self.assertEquals(airport.airlines["SA"], (3, "B"))
 
     def test_load_aircraft(self):
         airport = Airport(abs_path("./airport_data"))
@@ -121,4 +121,12 @@ class TestAirport(unittest.TestCase):
 
     def test_n_gates(self):
         airport = Airport(abs_path("./airport_data"))
-        self.assertEquals(airport.n_gates, 0)
+        self.assertEquals(airport.n_gates, 23)
+
+    def test_bay_gate_distance(self):
+        airport = Airport(abs_path("./airport_data"))
+        self.assertEquals(airport.n_gates, 23)
+        k, l = 14, 22
+        print(airport.bay_names[k], airport.gate_names[l], airport.bay_gate_distance[k][l])
+        self.assertAlmostEquals(airport.bay_gate_distance[26][13], 811.0)
+        self.assertAlmostEquals(airport.bay_gate_distance[14][22], 279.0)

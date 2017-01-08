@@ -45,9 +45,12 @@ class Airport:
         self.domestic_airports_path = normpath(join(airport_data_path, "domestic_airports.csv"))
         """Path to domestic airports csv file."""
 
+        self.domestic_gates_path = normpath(join(airport_data_path, "domestic_gates.csv"))
+        """Path to domestic gates csv file."""
+
         self.fueling_path = normpath(join(airport_data_path, "fueling.csv"))  #: Path to fueling csv file.
 
-        self.gates_path = normpath(join(airport_data_path, "gates.csv"))  #: Path to fueling csv file.
+        self.bay_gate_distance_path = normpath(join(airport_data_path, "bay_gate_distance.csv"))  #: Path to fueling csv file.
 
         self.adjacency_path = normpath(join(airport_data_path, "adjacency.csv"))
         """Path to csv file holing the adjacency table."""
@@ -61,12 +64,14 @@ class Airport:
         eg: self.bay_compliance_matrix[2]["C"]
         """
 
-        self._bay_terminal_distance = OrderedDict()  #: Dictionary holding the bay terminal distance table
+        self._bay_terminal_distance = []  #: Dictionary holding the bay terminal distance table
+        self.bay_gate_distance = []
 
         self.gate_names = []  #: List holding the gate names.
         self.bay_names = []  #: List holding the bay names. Bay indices are based on this dictionary
         self.terminal_names = []  #: List holding the terminal names.
         self.domestic_airports = []  #: List of domestic airports.
+        self.domestic_gates = []  #: List the domestic gates indices.
         self.fueling = []  #: List containing booleans indicating whether a bay has fueling pits or not.
         self.max_distance = {}  #: Dictionary holding the maximum distance per terminal.
         self.adjacency = []  #: List holding pairs of adjacent bays. Bays that share a gate.
@@ -78,8 +83,9 @@ class Airport:
         self.load_airlines()
         self.load_domestic_airports()
         self.load_fueling()
-        self.load_gates()
+        self.load_bay_gate_distance()
         self.load_adjacency()
+        self.load_domestic_gates()
 
     def load_airlines(self):
         """
@@ -178,12 +184,133 @@ class Airport:
                 # Add it to the bay compliance dict.
                 self.bay_compliance_matrix.append(bay_info)
 
+    def load_bay_gate_distance(self):
+        with open(self.bay_gate_distance_path) as f:
+            # Reset bay_terminal_distance to a list of None's with the
+            # length of self.bay_names.
+            self.bay_gate_distance = [None] * len(self.bay_names)
+            self.gate_names.clear()
+            # self.max_distance.clear()
+
+            # Read the heading
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # No heading check this time, since we don't yet know
+            # how many terminals there are. These are defined
+            # by this heading.
+
+            self.gate_names = heading[1:]
+            # self.max_distance = OrderedDict(zip(self.terminal_names, [0]*len(self.terminal_names)))
+
+            # Read line by line.
+            for line in f:
+                # Split and strip values.
+                line_values = [x.strip() for x in line.split(",")]
+
+                # Check if bay name is valid and get bay_index
+                bay_name = line_values[0]
+                if bay_name not in self.bay_names:
+                    raise Exception("Bay '{}' in the bay gate distance table is invalid".format(bay_name))
+                bay_index = self.bay_names.index(bay_name)
+
+                # Create bay info list
+                bay_info = [(None if x is "x" else float(x)) for x in line_values[1:]]
+                #
+                # for terminal_name, distance in bay_info.items():
+                #     if self.max_distance[terminal_name] < distance:
+                #         self.max_distance[terminal_name] = distance
+
+                # Add it to the bay compliance dict.
+                self.bay_gate_distance[bay_index] = bay_info
+
+            # Check whether we have the information for all bays.
+            missing = []
+            for bay_index, bay_info in enumerate(self.bay_gate_distance):
+                if bay_info is None:
+                    missing.append(self.bay_names[bay_index])
+            if len(missing):
+                raise Exception("Gate distance information is missing for bays\n{}".format(missing))
+
+    def load_domestic_airports(self):
+        with open(self.domestic_airports_path) as f:
+            self.domestic_airports.clear()
+
+            # Loop line by line
+            for line in f:
+                # Strip line of leading and trailing spaces, tabs, etc, and append it to the list.
+                self.domestic_airports.append(line.strip())
+
+    def load_domestic_gates(self):
+        with open(self.domestic_gates_path) as f:
+            self.domestic_gates.clear()
+
+            # Loop line by line
+            for line in f:
+                # Strip line of leading and trailing spaces, tabs, etc, and append it to the list.
+                gate_name = line.strip()
+                if gate_name in self.gate_names:
+                    self.domestic_gates.append(self.gate_names.index(gate_name))
+                else:
+                    raise Exception("Domestic bay '{}' is unknown.")
+
+    def load_fueling(self):
+        self.fueling = [None] * len(self.bay_names)
+
+        with open(self.fueling_path) as f:
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["bay", "fueling"]:
+                raise Exception("Invalid fueling csv file '{}'.".format(self.airlines_path))
+
+            # Read line by line
+            for line in f:
+                # Split and strip values.
+                line_values = [x.strip() for x in line.split(",")]
+
+                # Check whether bay is valid.
+                if line_values[0] not in self.bay_names:
+                    raise Exception("Invalid bay '{}' in the fueling csv.".format(line_values[0]))
+
+                bay_index = self.bay_names.index(line_values[0])
+                self.fueling[bay_index] = bool(int(line_values[1]))
+
+            # Check whether we have the fueling information for all bays.
+            missing = []
+            for bay_index, bay_info in enumerate(self.fueling):
+                if bay_info is None:
+                    missing.append(self.bay_names[bay_index])
+            if len(missing):
+                raise Exception("Fueling information is missing for bays\n{}".format(missing))
+
+    def load_adjacency(self):
+        with open(self.adjacency_path) as f:
+            self.adjacency.clear()
+
+            # Read the first line
+            # Split the line at the commas
+            # Strip any leading or trailing spaces, tabs, etc.
+            heading = [x.strip() for x in f.readline().split(",")]
+
+            # Check if the heading is valid.
+            if heading != ["bay_1", "bay_2"]:
+                raise Exception("Invalid adjacency csv file '{}'.".format(self.adjacency_path))
+
+            # Read line by line
+            for line in f:
+                # Split and strip line. Then get the bay indices.
+                line_values = (self.bay_names.index(x.strip()) for x in line.split(","))
+                self.adjacency.append(tuple(line_values))
+
     def load_bay_terminal_distance(self):
         with open(self.bay_terminal_distance_path) as f:
             # Reset bay_terminal_distance to a list of None's with the
             # length of self.bay_names.
             self._bay_terminal_distance = [None] * len(self.bay_names)
-            self.terminal_names.clear()
+            self.gate_names.clear()
             self.max_distance.clear()
 
             # Read the heading
@@ -227,82 +354,6 @@ class Airport:
             if len(missing):
                 raise Exception("Terminal distance information is missing for bays\n{}".format(missing))
 
-    def load_domestic_airports(self):
-        with open(self.domestic_airports_path) as f:
-            self.domestic_airports.clear()
-
-            # Loop line by line
-            for line in f:
-                # Strip line of leading and trailing spaces, tabs, etc, and append it to the list.
-                self.domestic_airports.append(line.strip())
-
-    def load_fueling(self):
-        self.fueling = [None] * len(self.bay_names)
-
-        with open(self.fueling_path) as f:
-            # Read the first line
-            # Split the line at the commas
-            # Strip any leading or trailing spaces, tabs, etc.
-            heading = [x.strip() for x in f.readline().split(",")]
-
-            # Check if the heading is valid.
-            if heading != ["bay", "fueling"]:
-                raise Exception("Invalid fueling csv file '{}'.".format(self.airlines_path))
-
-            # Read line by line
-            for line in f:
-                # Split and strip values.
-                line_values = [x.strip() for x in line.split(",")]
-
-                # Check whether bay is valid.
-                if line_values[0] not in self.bay_names:
-                    raise Exception("Invalid bay '{}' in the fueling csv.".format(line_values[0]))
-
-                bay_index = self.bay_names.index(line_values[0])
-                self.fueling[bay_index] = bool(int(line_values[1]))
-
-            # Check whether we have the fueling information for all bays.
-            missing = []
-            for bay_index, bay_info in enumerate(self.fueling):
-                if bay_info is None:
-                    missing.append(self.bay_names[bay_index])
-            if len(missing):
-                raise Exception("Fueling information is missing for bays\n{}".format(missing))
-
-    def load_gates(self):
-        self.gate_names.clear()
-        with open(self.gates_path) as f:
-            # Read the first line
-            # Split the line at the commas
-            # Strip any leading or trailing spaces, tabs, etc.
-            heading = [x.strip() for x in f.readline().split(",")]
-
-            # Check if the heading is valid.
-            if heading != ["gate"]:
-                raise Exception("Invalid fueling csv file '{}'.".format(self.airlines_path))
-
-            for line in f:
-                self.gate_names.append(line.strip())
-
-    def load_adjacency(self):
-        with open(self.adjacency_path) as f:
-            self.adjacency.clear()
-
-            # Read the first line
-            # Split the line at the commas
-            # Strip any leading or trailing spaces, tabs, etc.
-            heading = [x.strip() for x in f.readline().split(",")]
-
-            # Check if the heading is valid.
-            if heading != ["bay_1", "bay_2"]:
-                raise Exception("Invalid adjacency csv file '{}'.".format(self.adjacency_path))
-
-            # Read line by line
-            for line in f:
-                # Split and strip line. Then get the bay indices.
-                line_values = (self.bay_names.index(x.strip()) for x in line.split(","))
-                self.adjacency.append(tuple(line_values))
-
     def terminal_bay_distance(self, term, k):
         """
         :param string term: Terminal name.
@@ -324,4 +375,4 @@ class Airport:
         """
         Number of gates at the airport.
         """
-        return 0
+        return len(self.gate_names)
