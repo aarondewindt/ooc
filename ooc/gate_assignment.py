@@ -12,7 +12,7 @@ class GateAssignment:
         the flights of the day.
     """
 
-    def __init__(self, flights, bay, line_width_limit=120):
+    def __init__(self, flights, bays, line_width_limit=120):
         self.airport = flights.airport
         """"
         class:`ooc.Airport` object of holding the information of
@@ -25,7 +25,7 @@ class GateAssignment:
         flights of the day
         """
 
-        self.bay = bay
+        self.bay = bays
         """
         Array holding the bay for each flight.
         """
@@ -40,8 +40,42 @@ class GateAssignment:
         by a bit, since the checks are done after the new snippet has been written.
         """
 
+        self.delta = 0.001
         self.epsilon = 1
         self.eta = 1
+
+    def save_lp_file(self, path):
+        with open(path, "w") as f:
+            f.write(self.lp_code())
+
+    def lp_code(self):
+        print("Generating the lp code for the gate assignment...")
+
+        of_min_bay_gate_distance = self.of_min_bay_gate_distance()
+        of_airline_preference = self.of_airline_preference()
+        constraint_single_gate_per_flight = self.constraint_single_gate_per_flight()
+        constraint_time_conflict = self.constraint_time_conflict()
+        constraint_domestic = self.constraint_domestic()
+        constraint_kq_after_6pm = self.constraint_kq_after_6pm()
+        binary_decision_variables_declaration = self.binary_decision_variables_declaration()
+        of_penalty_variables = self.of_penalty_variables()
+
+        lp_code_parts = [
+            "Maximize",
+            of_min_bay_gate_distance,
+            of_airline_preference,
+            of_penalty_variables,
+            "Subject To",
+            constraint_single_gate_per_flight,
+            constraint_time_conflict,
+            constraint_domestic,
+            constraint_kq_after_6pm,
+            "BINARY",
+            binary_decision_variables_declaration,
+            "END",
+        ]
+
+        return "\n\n".join(lp_code_parts)
 
     def departing_flights(self):
         """
@@ -73,32 +107,54 @@ class GateAssignment:
                 raise Exception("Creating a new decision variable is not allowed.")
         return name
 
-    def m(self, i, l):
+    def m(self, i, j, l):
         """
-        Returns the name of the penalty value used in the max two flights per gate constraint.
+        Returns the name of the penalty value used in the .
 
         :param i: Flight 1 index
+        :param j: Flight 2 index
         :param l: Gate index
         :returns: M penalty value name
         :rtype: String
         """
-        name = "M_{}_{}".format(i, l)
+        name = "M_{}_{}_{}".format(i, j, l)
         if name not in self.m_list:
             self.m_list.append(name)
         return name
 
-    def preference(self, i, l):
-        if self.flights.flight_schedule[i].preference is not None:
-            return 1 if l in self.flights.flight_schedule[i].preference.gates else None
+    def flight_located_at_gate(self, i, l):
+        # Check if the flight is a remote and gate l is a dedicated bussing gate.
+        if (self.bay[i] in self.airport.remote_bays) and (l in self.airport.bussing_gates):
+            return True
         else:
+            return self.airport.bay_gate_distance[self.bay[i]][l] == 0
+
+    def has_preference(self, i, l):
+        if self.flights.flight_schedule[i].preference is not None:
+            return l in self.flights.flight_schedule[i].preference.gates
+        else:
+            return False
+
+    def preference(self, i, l):
+        # Check if this flight was placed on a bay connected to the gate
+        if self.flight_located_at_gate(i, l):
+            if self.has_preference(i, l):
+                return 1
+            else:
+                return 0.8
+        else:
+            if self.has_preference(i, l):
+                return 0.5
             return None
 
     def of_min_bay_gate_distance(self):
-        z6 = "\\ Minimization of bay gate distance.\n    "
+        print(" - Objective function: Minimization of bay gate distance")
+        z6 = "\\ Minimization of bay gate distance.\n   "
 
-        max_value = 0
+        of_max_value = 0
 
         for i, k, flight in self.departing_flights():
+            flight_max_value = 0
             for l in range(self.airport.n_gates):
                 bay_gate_distance = self.airport.bay_gate_distance[k][l]
                 # If the bay gate distance is None if it was marked as infeasible. So only
@@ -106,24 +162,28 @@ class GateAssignment:
                 # feasible.
                 if bay_gate_distance is not None:
                     constant = self.flights.n_passengers(i) \
-                               * bay_gate_distance
-                    max_value += constant
+                               * bay_gate_distance * self.delta
+                    if constant > flight_max_value:
+                        flight_max_value = constant
 
                     # Generate string with the decision variable and it's constant
                     # and add it to the objective function.
                     # Note that all of these factors are negative. This is because
                     # we want to minimize this objective function.
-                    z6 += " -{:<15.4f} {:10s}".format(constant, self.x(i, l, True))
+                    z6 += " -{:<17.4f} {:15s}".format(constant, self.x(i, l, True))
 
                     # Add new line if necessary
                     if len(z6.split("\n")[-1]) > self.line_width_limit:
                         z6 = z6.rstrip()
-                        z6 += "\n    "
+                        z6 += "\n   "
+            of_max_value += flight_max_value
 
+        self.epsilon = 2 * of_max_value
         return z6
 
     def of_airline_preference(self):
-        z7 = "\\ Maximization of airline preference.\n    "
+        print(" - Objective function: Maximization of airline preference.")
+        z7 = "\\ Maximization of airline preference.\n   "
 
         max_value = 0
 
@@ -139,20 +199,23 @@ class GateAssignment:
 
                     max_value += constant
 
-                    z7 += " -{:<15.4f} {:10s}".format(constant, self.x(i, l))
+                    z7 += " +{:<17.4f} {:15s}".format(constant, self.x(i, l))
 
                     # Add new line if necessary
                     if len(z7.split("\n")[-1]) > self.line_width_limit:
                         z7 = z7.rstrip()
-                        z7 += "\n    "
+                        z7 += "\n   "
+
+        self.eta = max_value if max_value >= self.epsilon else self.epsilon
 
         return z7
 
     def of_penalty_variables(self):
+        print(" - Objective function: Penalty variables.")
         z8 = "\\ Penalty variables.\n   "
 
         for m in self.m_list:
-            z8 += " +{:10s}".format(m)
+            z8 += " -{:<20.4f}{:15s}".format(self.eta, m)
             # Add new line if necessary
             if len(z8.split("\n")[-1]) > self.line_width_limit:
                 z8 = z8.rstrip()
@@ -165,27 +228,27 @@ class GateAssignment:
         :return: String containing the code to declare the binary decision variables as binary.
         :rtype: string
         """
+        print(" - Binary decision variables declaration.")
         s = "\\ Binary decision variables\n   "
-
-        for name in self.x_list:
-            s += " {:10s}".format(name)
+        for name in self.x_list + self.m_list:
+            s += " {:15s}".format(name)
 
             # Add new line if necessary
             if len(s.split("\n")[-1]) > self.line_width_limit:
                 s += "\n   "
         return s
 
-    def constraint_single_gate_to_flight(self):
+    def constraint_single_gate_per_flight(self):
         """
         This constraint makes sure that one gate is assigned to each departing flight.
         """
-
-        c = "\\ Single gate to flight constraint.\n"
+        print(" - Constraint: Single gate to flight constraint.")
+        c = "\\ Single gate to flight constraint.\n   "
 
         # Loop through each flight.
         for i, k, flight in self.departing_flights():
             # Start writing the constraint for this flight.
-            c += "sg_{}:\n".format(i)
+            c += "sg_{}:\n       ".format(i)
 
             # Loop through each bay and check whether it's compliant with the aircraft used in the flight.
             for l in range(self.airport.n_gates):
@@ -197,58 +260,50 @@ class GateAssignment:
 
                     # Add new line if necessary
                     if len(c.split("\n")[-1]) > self.line_width_limit:
-                        c += "\n"
+                        c += "\n       "
 
             # Finish the constraint, and loop back again fo the next flight.
-            c += " = 1\n"
+            c += " = 1\n   "
         return c
 
-    def constraint_max_two_flights_per_gate(self):
+    def constraint_time_conflict(self):
         """
 
         :return:
         """
+        print(" - Constraint: Time conflict.")
+        c = "\\ Time conflict constrains\n   "
 
-        c = "\\ Max two flights per gate constrains\n"
-
-        # Create a constraint for each departing flight.
+        # Loop through all pairs of flights
         for i, k, flight in self.departing_flights():
-            # Loop through each gate.
-            for l in range(self.airport.n_gates):
-                # Check if bay gate combination is feasible.
-                if self.airport.bay_gate_distance[k][l] is not None:
-                    # Create the constraint for flight i gate l combination
-                    d = "mg_{}_{}:\n".format(i, l)
-
-                    # Number of terms being added to the constraint. If there are less than two, than the
-                    # constraint is unnecessary.
-                    n_terms = 0
-
-                    # Add a term for each flight that has a time conflict with flight i and is feasible to connect to
-                    # gate l.
-                    for j, j_k, j_flight in self.departing_flights():
-                        if self.flights.time_conflict(i, j) and (self.airport.bay_gate_distance[j_k][l] is not None):
-                            n_terms += 1
-                            d += " +{:10s}".format(self.x(j, l))
-                        # Add new line if necessary
-                        if len(d.split("\n")[-1]) > self.line_width_limit:
-                            d = d.rstrip()
-                            d += "\n"
-
-                    # Finish the constraint ony if at least two terms where added to it.
-                    if n_terms >= 2:
-                        # Add the penalty variable and finish the constraint.
-                        c += d + "-{} <= 1\n".format(self.m(i, l))
+            for j, j_k, j_flight in self.departing_flights():
+                # The time conflict constraint for pairs (i, j) and (j, i) are the same. So we can half the number of
+                # constraints by only creating then for one of these pairs.
+                if i < j:
+                    # Check whether there is a time conflict.
+                    if self.flights.time_conflict(i, j):
+                        # Loop through each gate and check whether the bay gate combinations are feasible.
+                        for l in range(self.airport.n_gates):
+                            if (self.airport.bay_gate_distance[k][l] is not None) and \
+                               (self.airport.bay_gate_distance[j_k][l] is not None):
+                                c += "tc_{}_{}_{}: {} + {} - {} < 2\n".format(i, j, l,
+                                                                               self.x(i, l),
+                                                                               self.x(j, l),
+                                                                               self.m(i, j, l))
 
         return c
 
     def constraint_domestic(self):
-        c = "\\ Domestic flight constraints\n"
+        print(" - Constraint: Domestic flight.")
+
+        c = "\\ Domestic flight constraints\n   "
 
         # Loop through all departing flights
         for i, k, flight in self.departing_flights():
+            # if self.flights.domestic(i, force_departing=True):
+            #     continue
             # Start with the constraint for flight i.
-            c += "do_{}:\n".format(i)
+            c += "do_{}:\n       ".format(i)
 
             # Loop through all domestic gates.
             for l in self.airport.domestic_gates:
@@ -259,19 +314,20 @@ class GateAssignment:
                     # Add new line if necessary
                     if len(c.split("\n")[-1]) > self.line_width_limit:
                         c = c.rstrip()
-                        c += "\n"
+                        c += "\n       "
 
             # Finish constraint by adding either equality to one or zero depending on whether this is a domestic
             # flight or not.
-            if self.flights.domestic(i):
-                c += " = 1\n"
+            if self.flights.domestic(i, departing=True):
+                c += " = 1\n   "
             else:
-                c += " = 0\n"
+                c += " = 0\n   "
 
         return c
 
     def constraint_kq_after_6pm(self):
-        c = "\\ Domestic flight constraints\n"
+        print(" - Constraint: KQ flights after 6pm.")
+        c = "\\ Constraints for KQ flights after 6pm\n   "
         time_6pm = time(hour=18)
 
         non_kq_gates = ['4', '5', '7', '8', '9', '10']
@@ -281,7 +337,7 @@ class GateAssignment:
 
         for i, k, flight in self.departing_flights():
             if (flight.etd >= time_6pm) and (self.flights.airline(i) == "KQ"):
-                c += "k6_{}:\n".format(i)
+                c += "k6_{}:\n       ".format(i)
                 for l in non_kq_gates:
                     if self.airport.bay_gate_distance[k][l] is not None:
                         c += " +{:10s}".format(self.x(i, l))
@@ -289,10 +345,10 @@ class GateAssignment:
                         # Add new line if necessary
                         if len(c.split("\n")[-1]) > self.line_width_limit:
                             c = c.rstrip()
-                            c += "\n"
+                            c += "\n       "
 
                 # Finish constraint.
-                c += " = 0\n"
+                c += " = 0\n   "
 
         return c
 

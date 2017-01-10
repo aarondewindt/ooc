@@ -104,6 +104,7 @@ class BayAssignment:
         """
         :return: lp code for solving the bay assignment problem.
         """
+        print("Generating the cplex lp code for the bay assignment...")
 
         constraint_single_bay_compliance = self.constraint_single_bay_compliance()
         constraint_single_time_slot = self.constraint_single_time_slot()
@@ -141,6 +142,8 @@ class BayAssignment:
            between the check-in terminal and bay. aka z1.
         :rtype: string
         """
+        print(" - Objective function: Minimisation of passenger transport distance")
+
         # Initialize string that will hold the object function
         z1 = "// Minimization of passenger transport distance\n    "
 
@@ -181,6 +184,9 @@ class BayAssignment:
         :return: Objective function for maximizing airline bay preference.
         :rtype: string
         """
+
+        print(" - Objective function: Maximisation of airline preference")
+
         # Initialize empty string that will hold the objective function.
         z2 = "// Maximization of airline preference\n    "
 
@@ -216,19 +222,22 @@ class BayAssignment:
         :return: Objective function with the summation of all penalty values U, V, W and S.
         """
 
+        print(" - Objective function: Penalty values.")
+
         of = "// Penalty values.\n   "
-        for penalty_name in self.u_list + self.v_list + self.w_list+ self.s_list:
-            # The constant will just be the objective function's weight factor.
-            constant = self.gamma
+        for penalty_list in [self.u_list, self.v_list, self.w_list, self.s_list]:
+            for penalty_name in penalty_list:
+                # The constant will just be the objective function's weight factor.
+                constant = self.gamma
 
-            # Generate string with the penalty value and it's constant
-            # and add it to the objective function.
-            of += " +{:<15.4f} {:10s}".format(constant, penalty_name)
+                # Generate string with the penalty value and it's constant
+                # and add it to the objective function.
+                of += " +{:<15.4f} {:10s}".format(constant, penalty_name)
 
-            # Add new line if necessary
-            if (not self.compact) or (len(of.split("\n")[-1]) > self.line_width_limit):
-                of = of.rstrip()
-                of += "\n   "
+                # Add new line if necessary
+                if (not self.compact) or (len(of.split("\n")[-1]) > self.line_width_limit):
+                    of = of.rstrip()
+                    of += "\n   "
         return of + "\n"
 
     def objective_function(self):
@@ -246,6 +255,9 @@ class BayAssignment:
         :return: String containing the code to declare the binary decision variables as binary.
         :rtype: string
         """
+
+        print(" - Binary values declaration")
+
         if len(self.x_list) == 0:
             # If there are no variables in the list generate the objective function to generate them.
             self.objective_function()
@@ -285,7 +297,8 @@ class BayAssignment:
             if allow_new:
                 self.x_list.append(name)
             else:
-                raise Exception("Creating a new decision variable is not allowed.")
+                raise Exception("Creating a new decision variable is not allowed. {} {}".format(
+                    i, self.airport.bay_names[k]))
 
         return name
 
@@ -346,6 +359,8 @@ class BayAssignment:
         :rtype: string
         """
 
+        print(" - Constraint: Single bay per flight and bay compliance.")
+
         # This constraint is the only one allowed to create new X decision variables.
         # The reason behind this is to reduce the total number of decision variables.
         # There is no need to have decision variables for flight/bay combinations that
@@ -383,6 +398,8 @@ class BayAssignment:
         :rtype: string
         """
 
+        print(" - Constraint: Single time slot.")
+
         # Add a commend to the code to indicate where the single time slot constrains begin.
         c = "// Single time slot constraints.\n"
 
@@ -418,6 +435,8 @@ class BayAssignment:
         :return: Fueling constraints.
         :rtype:
         """
+
+        print(" - Constraint: Fueling")
 
         # These set of constraints are split in two. The first consists of all
         # non-domestic departing flights and "Full" domestic flights. The second
@@ -479,7 +498,9 @@ class BayAssignment:
         :return: Splitted flight constraints.
         """
 
-        c = "// Splitted constraints\n"
+        print(" - Constraint: Splitted flights")
+
+        c = "// Splitted flights constraints\n"
 
         # Loop through all flights.
         for i in range(self.flights.n_flights):
@@ -545,6 +566,9 @@ class BayAssignment:
 
         :return: Adjacency constrains
         """
+
+        print(" - Constraint: Adjacency")
+
         c = "// Adjacency constraint\n"
 
         # Loop through all combinations of flights

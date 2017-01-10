@@ -26,7 +26,7 @@ class FlightSolution:
                      ("in_flight_no", 12),
                      ("origin", 6),
                      ("eta", 5),
-                     ("bay", 3),
+                     ("bay", 4),
                      ("gate", 4),
                      ("reg_no", 6),
                      ("out_flight_no", 13),

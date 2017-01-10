@@ -136,10 +136,15 @@ bays = OrderedDict((
     ("H8", 8),
     ("H9", 9),
     ("H10", 10),
+    ("SPV1", None),
+    ("SPV2", None),
 ))
 
 
 bay_gate_distance = OrderedDict()
+
+inactive_gates = [3]
+non_existing_gates = [6, 11]
 
 for bay_name, i in bays.items():
     if bay_name.startswith("H"):
@@ -151,7 +156,9 @@ for bay_name, i in bays.items():
 
         # Add distance to normal gates
         for j in range(1, 21):
-            if j in [3, 6, 11]:
+            if j in non_existing_gates:
+                pass
+            elif j in inactive_gates:
                 ds_gates.append("x")
             else:
                 ds_gates.append(str(abs(pg1 - ds_nr[j])))
@@ -164,7 +171,7 @@ for bay_name, i in bays.items():
 
 
     elif bay_name.startswith("J"):
-        # Position relative to gate 14
+        # Position relative to bussing area
         pg14 = ds_j[i]
 
         # Array holding the distance to each gate.
@@ -172,22 +179,37 @@ for bay_name, i in bays.items():
 
         # Add distance to normal gates
         for j in range(1, 21):
-            if j in [3, 6, 11]:
+            if j in non_existing_gates:
+                pass
+            elif j in inactive_gates:
                 ds_gates.append("x")
             else:
-                ds_gates.append(str(abs(ds_nr[j] - ds_nr[14]) + pg14))
+                ds_gates.append(str(abs(ds_nr[j] - ds_bussing) + pg14))
 
         # Add distance to bussing gates.
         for j in range(21, 26):
-            ds_gates.append(str(ds_bussing - ds_nr[14] + pg14))
+            ds_gates.append(str(pg14))
 
         bay_gate_distance[bay_name] = ds_gates
 
+    elif bay_name.startswith("SPV"):
+        # Array holding the distance to each gate.
+        ds_gates = []
 
+        # Add distance to normal gates
+        for j in range(1, 21):
+            if j in non_existing_gates:
+                pass
+            elif j in inactive_gates:
+                ds_gates.append("x")
+            else:
+                ds_gates.append(str(ds_stpv + ds_nr[j]))
 
-    elif bay_name.startswith("STPV"):
-        # Not implemented
-        pass
+        # Add distance to bussing gates.
+        for j in range(21, 26):
+            ds_gates.append(str(ds_stpv + ds_bussing))
+
+        bay_gate_distance[bay_name] = ds_gates
     else:
         # distance to gate 1
         dsg1 = ds_nr[i]
@@ -197,7 +219,9 @@ for bay_name, i in bays.items():
 
         # Add distance to normal gates
         for j in range(1, 21):
-            if j in [3, 6, 11]:
+            if j in non_existing_gates:
+                pass
+            elif j in inactive_gates:
                 ds_gates.append("x")
             else:
                 ds_gates.append(str(abs(dsg1-ds_nr[j])))
@@ -213,12 +237,14 @@ sio = StringIO()
 
 # Write header
 
-sio.write("bay, ")
+sio.write("bay , ")
 
 
 def gate_header():
     """Yield strings containing the names of each gate."""
     for i in range(1, 26):
+        if i in non_existing_gates:
+            continue
         yield "{:4}".format(i)
 
 sio.write(", ".join(gate_header()))
@@ -226,9 +252,9 @@ sio.write("\n")
 
 for bay_name, ds_gates in bay_gate_distance.items():
     def foo():
-        for i in range(0, 25):
+        for i in range(0, 23):
             yield "{:>4}".format(ds_gates[i])
-    sio.write("{:3}, ".format(bay_name))
+    sio.write("{:4}, ".format(bay_name))
     sio.write(", ".join(foo()))
     sio.write("\n")
 

@@ -96,6 +96,7 @@ class Flights:
         self.load_current()
         self.load_preferences()
         self.load_flight_data()
+        self.check_duplicate_flights()
 
     def load_flight_data(self):
         with open(self.flight_data_path) as f:
@@ -120,10 +121,18 @@ class Flights:
                            "ac_type"]:
                 raise Exception("Invalid flight schedule csv file '{}'.".format(self.flight_data_path))
 
+            line_nr = -1
             # Read line by line.
             for line in f:
+                line_nr += 1
                 # Split and strip values.
                 line_values = [None if y == "" else y for y in [x.strip() for x in line.split(",")]]
+
+                # if line_values[8] not in self.airport.domestic_airports:
+                #     continue
+                #
+                # print("{:4d} {:4s} {:4s} {:5s} {:5s}".format(
+                #     line_nr, line_values[4], line_values[5] or "None", line_values[3], line_values[9]))
 
                 # Get and check airline code. If neither an inbound
                 # nor outbound flight number was given, set airline
@@ -242,6 +251,19 @@ class Flights:
                 current = CurrentType(bay=bay_index)
                 self.current_table[line_values[0]] = current
 
+    def check_duplicate_flights(self):
+        for i in range(self.n_flights):
+            for j in range(i+1, self.n_flights):
+                if (((self.flight_schedule[i].in_flight_no == self.flight_schedule[j].in_flight_no) and
+                     (self.flight_schedule[i].in_flight_no is not None)) or
+                    ((self.flight_schedule[i].out_flight_no == self.flight_schedule[j].out_flight_no) and
+                     (self.flight_schedule[i].out_flight_no is not None))
+                    ) and \
+                        (self.flight_schedule[i].eta == self.flight_schedule[j].eta) and \
+                        (self.flight_schedule[i].etd == self.flight_schedule[j].etd):
+                    print("Duplicate flights {} {}".format(i, j))
+
+
     @property
     def n_flights(self):
         """
@@ -282,22 +304,23 @@ class Flights:
         """
 
         # If it's a domestic flight then put it on terminal D. Otherwise from the terminal information.
-        if self.domestic(i):
+        if self.domestic(i, departing=True):
             return "D"
         else:
             airline_code = self.airline(i)
             return self.airport.airlines[airline_code].terminal
 
-    def domestic(self, i):
+    def domestic(self, i, departing=False):
         """
         Derived from airport code in raw airport_data. It first checks the origin airport. If no
 
         :param int i: Flight index
+        :param bool departing: If true it will first check the destination airport code.
         :return: True if it's a domestic flight
         :rtype: bool
         """
 
-        if self.flight_schedule[i].flight_type in [ft.Full, ft.Arr]:
+        if self.flight_schedule[i].flight_type in [ft.Arr, ft.Park] and not departing:
             # If this a full flight or arrival, check the origin
             # airport first. If no origin airport was given check
             # the destination airport.

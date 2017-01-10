@@ -55,6 +55,12 @@ class Airport:
         self.adjacency_path = normpath(join(airport_data_path, "adjacency.csv"))
         """Path to csv file holing the adjacency table."""
 
+        self.remote_bays_path = normpath(join(airport_data_path, "remote_bays.csv"))
+        """Path to csv file holing the list of remote bays."""
+
+        self.bussing_gates_path = normpath(join(airport_data_path, "bussing_gates.csv"))
+        """Path to csv file holing the list of dedicated bussing gates."""
+
         self.airlines = OrderedDict()  #: Dictionary holding airline information.
         self.aircraft = OrderedDict()  #: Dictionary holding aircraft information.
         self.bay_compliance_matrix = []
@@ -75,6 +81,8 @@ class Airport:
         self.fueling = []  #: List containing booleans indicating whether a bay has fueling pits or not.
         self.max_distance = {}  #: Dictionary holding the maximum distance per terminal.
         self.adjacency = []  #: List holding pairs of adjacent bays. Bays that share a gate.
+        self.remote_bays = []  #: List of remote bays indices.
+        self.bussing_gates = []  #: List of dedicated bussing gates.
 
         # Load in data
         self.load_aircraft()
@@ -108,6 +116,10 @@ class Airport:
             for line in f:
                 # Split and strip values.
                 line_values = [x.strip() for x in line.split(",")]
+
+                # If empty line, skip it.
+                if len(line_values) == 1:
+                    continue
 
                 # Check if terminal exists
                 if line_values[2] not in self.terminal_names:
@@ -145,6 +157,10 @@ class Airport:
                 # Split and strip values.
                 line_values = [x.strip() for x in line.split(",")]
 
+                # If empty line, skip it.
+                if len(line_values) == 1:
+                    continue
+
                 # Create aircraft tuple.
                 aircraft = AircraftType(group=line_values[1],
                                         n_passengers=int(line_values[2]))
@@ -173,6 +189,10 @@ class Airport:
             for line in f:
                 # Split and strip values.
                 line_values = [x.strip() for x in line.split(",")]
+
+                # If empty line, skip it.
+                if len(line_values) == 1:
+                    continue
 
                 # Create bay info dictionary
                 bay_info = OrderedDict(zip(aircraft_groups,
@@ -206,6 +226,10 @@ class Airport:
             for line in f:
                 # Split and strip values.
                 line_values = [x.strip() for x in line.split(",")]
+
+                # If empty line, skip it.
+                if len(line_values) == 1:
+                    continue
 
                 # Check if bay name is valid and get bay_index
                 bay_name = line_values[0]
@@ -251,7 +275,7 @@ class Airport:
                 if gate_name in self.gate_names:
                     self.domestic_gates.append(self.gate_names.index(gate_name))
                 else:
-                    raise Exception("Domestic bay '{}' is unknown.")
+                    raise Exception("Domestic gate '{}' is unknown.")
 
     def load_fueling(self):
         self.fueling = [None] * len(self.bay_names)
@@ -270,6 +294,10 @@ class Airport:
             for line in f:
                 # Split and strip values.
                 line_values = [x.strip() for x in line.split(",")]
+
+                # If empty line, skip it.
+                if len(line_values) == 1:
+                    continue
 
                 # Check whether bay is valid.
                 if line_values[0] not in self.bay_names:
@@ -353,6 +381,32 @@ class Airport:
                     missing.append(self.bay_names[bay_index])
             if len(missing):
                 raise Exception("Terminal distance information is missing for bays\n{}".format(missing))
+
+    def load_remote_bays(self):
+        with open(self.remote_bays_path) as f:
+            self.remote_bays.clear()
+
+            # Loop line by line
+            for line in f:
+                # Strip line of leading and trailing spaces, tabs, etc, and append it to the list.
+                bay_name = line.strip()
+                if bay_name in self.bay_names:
+                    self.remote_bays.append(self.bay_names.index(bay_name))
+                else:
+                    raise Exception("Remote bay '{}' is unknown.")
+
+    def load_bussing_gates(self):
+        with open(self.bussing_gates_path) as f:
+            self.bussing_gates.clear()
+
+            # Loop line by line
+            for line in f:
+                # Strip line of leading and trailing spaces, tabs, etc, and append it to the list.
+                gate_name = line.strip()
+                if gate_name in self.gate_names:
+                    self.bussing_gates.append(self.gate_names.index(gate_name))
+                else:
+                    raise Exception("Bussing gate '{}' is unknown.")
 
     def terminal_bay_distance(self, term, k):
         """

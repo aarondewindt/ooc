@@ -42,7 +42,7 @@ class TestGateAssignment(unittest.TestCase):
     def test_of_penalty_variables(self):
         gate_assignment = self.load_small_case()
         gate_assignment.of_min_bay_gate_distance()
-        gate_assignment.constraint_max_two_flights_per_gate()
+        gate_assignment.constraint_time_conflict()
         print(gate_assignment.of_penalty_variables())
 
     def test_binary_decision_variables_declaration(self):
@@ -51,16 +51,16 @@ class TestGateAssignment(unittest.TestCase):
 
         print(gate_assignment.binary_decision_variables_declaration())
 
-    def test_constraint_single_gate_to_flight(self):
+    def test_constraint_single_gate_per_flight(self):
         gate_assignment = self.load_small_case()
         gate_assignment.of_min_bay_gate_distance()
 
-        print(gate_assignment.constraint_single_gate_to_flight())
+        print(gate_assignment.constraint_single_gate_per_flight())
 
     def test_constraint_max_two_flights_per_gate(self):
         gate_assignment = self.load_small_case()
         gate_assignment.of_min_bay_gate_distance()
-        print(gate_assignment.constraint_max_two_flights_per_gate())
+        print(gate_assignment.constraint_time_conflict())
 
     def test_constraint_domestic(self):
         gate_assignment = self.load_small_case()
@@ -71,3 +71,7 @@ class TestGateAssignment(unittest.TestCase):
         gate_assignment = self.load_small_case()
         gate_assignment.of_min_bay_gate_distance()
         print(gate_assignment.constraint_kq_after_6pm())
+
+    def test_lp_code(self):
+        gate_assignment = self.load_small_case()
+        print(gate_assignment.lp_code())
