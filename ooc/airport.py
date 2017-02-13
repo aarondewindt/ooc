@@ -15,26 +15,24 @@ Named tuple type holding aircraft information.
 
 class Airport:
     """
-    Class holding all information regarding the airport.
+    Class holding all information regarding the target airport.
 
-    :param string airport_data_path: Path a folder containing the csv
+    :param string airport_data_path: Path to a folder containing the csv
        files with the airport airport_data.
     """
 
     def __init__(self, airport_data_path):
-        self.flights = None
-        """
-        :class:`ooc.Flights` object.
-        """
-
-        # Get absolute path to airport data in case a relative path was given.
+        # Get the absolute path to airport data in case a relative path was given.
         # This is to prevent any future bugs which may be caused by switching the
         # current working directory.
         airport_data_path = abspath(airport_data_path)
 
         # Create paths to individual data files.
-        self.airlines_path = normpath(join(airport_data_path, "airlines.csv"))  #: Path to airlines csv file.
-        self.aircraft_path = normpath(join(airport_data_path, "aircraft.csv"))  #: Path to aircraft csv file.
+        self.airlines_path = normpath(join(airport_data_path, "airlines.csv"))
+        """Path to the airlines csv file."""
+
+        self.aircraft_path = normpath(join(airport_data_path, "aircraft.csv"))
+        """Path to the aircraft csv file."""
 
         self.bay_compliance_matrix_path = normpath(join(airport_data_path, "bay_compliance_matrix.csv"))
         """Path to the bay compliance matrix csv file."""
@@ -48,9 +46,11 @@ class Airport:
         self.domestic_gates_path = normpath(join(airport_data_path, "domestic_gates.csv"))
         """Path to domestic gates csv file."""
 
-        self.fueling_path = normpath(join(airport_data_path, "fueling.csv"))  #: Path to fueling csv file.
+        self.fueling_path = normpath(join(airport_data_path, "fueling.csv"))
+        """Path to fueling csv file."""
 
-        self.bay_gate_distance_path = normpath(join(airport_data_path, "bay_gate_distance.csv"))  #: Path to fueling csv file.
+        self.bay_gate_distance_path = normpath(join(airport_data_path, "bay_gate_distance.csv"))
+        """Path to fueling csv file."""
 
         self.adjacency_path = normpath(join(airport_data_path, "adjacency.csv"))
         """Path to csv file holing the adjacency table."""
@@ -70,9 +70,8 @@ class Airport:
         eg: self.bay_compliance_matrix[2]["C"]
         """
 
-        self._bay_terminal_distance = []  #: Dictionary holding the bay terminal distance table
-        self.bay_gate_distance = []
-
+        self._bay_terminal_distance = []  #: List holding the bay terminal distance table.
+        self.bay_gate_distance = []  #: List holding the bay gate distance table.
         self.gate_names = []  #: List holding the gate names.
         self.bay_names = []  #: List holding the bay names. Bay indices are based on this dictionary
         self.terminal_names = []  #: List holding the terminal names.
@@ -84,7 +83,7 @@ class Airport:
         self.remote_bays = []  #: List of remote bays indices.
         self.bussing_gates = []  #: List of dedicated bussing gates.
 
-        # Load in data
+        # Load data files
         self.load_aircraft()
         self.load_bay_compliance_matrix()
         self.load_bay_terminal_distance()
@@ -97,7 +96,7 @@ class Airport:
 
     def load_airlines(self):
         """
-        Loads in the airline data from the csv file.
+        Loads in the airline information from the csv file.
         """
         with open(self.airlines_path) as f:
             # Clear airline dictionary.
@@ -126,7 +125,7 @@ class Airport:
                     raise Exception("Invalid terminal '{}' for airline '{}'.".format(line_values[0],
                                                                                      line_values[2]))
 
-                # Convert to integers and create AirlineType object.
+                # Convert to integers and create and AirlineType object.
                 airline = AirlineType(group=int(line_values[1]),
                                       terminal=line_values[2])
 
@@ -201,7 +200,7 @@ class Airport:
                 # Add bay name to bay name list.
                 self.bay_names.append(line_values[0])
 
-                # Add it to the bay compliance dict.
+                # Add it to the bay compliance list.
                 self.bay_compliance_matrix.append(bay_info)
 
     def load_bay_gate_distance(self):
@@ -216,11 +215,10 @@ class Airport:
             heading = [x.strip() for x in f.readline().split(",")]
 
             # No heading check this time, since we don't yet know
-            # how many terminals there are. These are defined
+            # how many gates there are. These are defined
             # by this heading.
 
             self.gate_names = heading[1:]
-            # self.max_distance = OrderedDict(zip(self.terminal_names, [0]*len(self.terminal_names)))
 
             # Read line by line.
             for line in f:
@@ -239,10 +237,6 @@ class Airport:
 
                 # Create bay info list
                 bay_info = [(None if x is "x" else float(x)) for x in line_values[1:]]
-                #
-                # for terminal_name, distance in bay_info.items():
-                #     if self.max_distance[terminal_name] < distance:
-                #         self.max_distance[terminal_name] = distance
 
                 # Add it to the bay compliance dict.
                 self.bay_gate_distance[bay_index] = bay_info
@@ -362,8 +356,7 @@ class Airport:
                     raise Exception("Bay '{}' in the bay terminal distance table is invalid".format(bay_name))
                 bay_index = self.bay_names.index(bay_name)
 
-                # Create bay info list
-                # bay_info = [int(x) for x in line_values[1:]]
+                # Create bay info dictionary
                 bay_info = OrderedDict(zip(self.terminal_names,
                                            [float(x) for x in line_values[1:]]))
 

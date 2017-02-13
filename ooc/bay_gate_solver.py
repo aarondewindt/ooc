@@ -3,10 +3,14 @@ from os.path import isdir, isfile, abspath, normpath, join
 import subprocess
 import sys
 import xml.etree.ElementTree as ET  #: the extra-terrestrial
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+from datetime import timedelta, datetime, time
 
 from ooc import print_color
 
-from ooc import Airport, Flights, BayAssignment, FlightSolution, GateAssignment
+from ooc import Airport, Flights, BayAssignment, FlightSolution, GateAssignment, ft
+from ooc.key_pair_dictionary import KeyPairDictionary
 
 
 class BayGateSolver:
@@ -88,14 +92,14 @@ class BayGateSolver:
             solution = FlightSolution(i)
             self.solutions.append(solution)
 
-            solution.flight_type = str(flight.flight_type)
+            solution.flight_type = flight.flight_type
             solution.in_flight_no = flight.in_flight_no
             solution.origin = flight.origin
-            solution.eta = flight.eta.strftime("%H:%M")
+            solution.eta = flight.eta  #
             solution.reg_no = flight.reg_no
             solution.out_flight_no = flight.out_flight_no
             solution.dest = flight.dest
-            solution.etd = flight.etd.strftime("%H:%M")
+            solution.etd = flight.etd
             solution.ac_type = flight.ac_type
 
     def solve_bay_assignment(self):
@@ -161,24 +165,7 @@ class BayGateSolver:
         for i, solution in enumerate(self.solutions):
             assert solution.bay is not None, "Flight {} has no bay assigned to it.".format(i)
 
-    def print_solution(self):
-        """
-        Returns a string with the solutions
 
-        :return:
-        """
-
-        s = self.solutions[0].str_heading()
-        for solution in self.solutions:
-            s += solution.str_data()
-
-        print(s)
-
-        # from sys import stdout
-        # stdout.write("[")
-        # for solution in self.solutions:
-        #     stdout.write("{}, ".format(solution.bay))
-        # stdout.write("]")
 
     def solve_gate_assignment(self):
         bays = [solution.bay_idx for solution in self.solutions]
@@ -244,6 +231,89 @@ class BayGateSolver:
         for i, solution in enumerate(self.solutions):
             if self.flights.departing(i):
                 assert solution.bay is not None, "Flight {} has no bay assigned to it.".format(i)
+
+    def print_solution(self):
+        """
+        Returns a string with the solutions
+
+        :return:
+        """
+
+        s = self.solutions[0].str_heading()
+        for solution in self.solutions:
+            s += solution.str_data()
+
+        print(s)
+
+    def create_bay_assignment_chart(self):
+        fig = plt.figure()
+        plt.yticks(range(self.airport.n_bays), self.airport.bay_names)
+        plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
+                  datetime.combine(self.flights.config['date'], time(23, 59, 59))])
+
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        plt.gca().xaxis.set_major_locator(mdates.HourLocator())
+
+        last_color = 1
+
+        for i, solution in enumerate(self.solutions):
+            if solution.flight_type is ft.Arr:
+                last_color = (last_color + 1) % 9 + 1
+                color = last_color
+            elif solution.flight_type is ft.Full:
+                color = 0
+            eta = datetime.combine(self.flights.config['date'], solution.eta)
+            etd = datetime.combine(self.flights.config['date'], solution.etd)
+            if eta > etd:
+                plt.plot([eta, etd + timedelta(days=1)],
+                         [solution.bay_idx] * 2,
+                         [eta - timedelta(days=1), etd],
+                         [solution.bay_idx] * 2
+                         , color="C{}".format(color))
+            else:
+                plt.plot([eta, etd],
+                         [solution.bay_idx] * 2, color="C{}".format(color))
+
+        plt.gcf().autofmt_xdate()
+        return fig
+
+    def create_gate_assignment_chart(self):
+        fig = plt.figure()
+        plt.yticks(range(self.airport.n_gates), self.airport.gate_names)
+        plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
+                  datetime.combine(self.flights.config['date'], time(23, 59, 59))])
+
+        plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        plt.gca().xaxis.set_major_locator(mdates.HourLocator())
+
+        gate_conflict_pairs = KeyPairDictionary()
+        line_dy = {}
+
+        for i in range(self.flights.n_flights):
+            for j in range(i+1, self.flights.n_flights):
+                if self.flights.time_conflict(i, j):
+                    if self.solutions[i].gate_idx == self.solutions[j].gate_idx:
+                        gate_conflict_pairs[i, j] = None
+
+        for i, solution in enumerate(self.solutions):
+            if solution.gate_idx is not None:
+                # Allow 20 different levels for placing conflicting lines.
+                dy_list = [False]*20
+                for pair in gate_conflict_pairs.pairs(i):
+                    if pair in line_dy:
+                        dy_list[line_dy[pair]] = True
+                dy = 0
+                while dy_list[dy]:
+                    dy += 1
+                line_dy[i] = dy
+
+                eta = datetime.combine(self.flights.config['date'], solution.eta)
+                etd = datetime.combine(self.flights.config['date'], solution.etd)
+                plt.plot([eta, etd],
+                         [solution.gate_idx - 0.2*dy] * 2)
+
+        plt.gcf().autofmt_xdate()
+        return fig
 
 
 

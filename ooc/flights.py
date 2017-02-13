@@ -1,25 +1,17 @@
 from collections import namedtuple
 from enum import Enum
 from os.path import abspath, join, normpath
-from datetime import time
+from datetime import time, date, datetime
+import json
 
-
-# DOM array containing the information whether a departure flight is domestic
-# P array containing the number of passengers for each flight
-# PARK Array containing the information whether a flight is a ”Full’, Arrival, Parking or Departure activity’
-# PREF array containing all preferences for each flight bay combination
-# PREF2 array containing all preferences for each flight gate combination
-# T Time Matrix containing the information whether flight pairs are conflicting
-# TD Time Departure Matrix containing the information whether boarding activities of departing flight pairs are conflicting
-# term index representing the check - in terminal
 
 FlightType = namedtuple("FlightType",
                         ("flight_type",
                          "in_flight_no",
                          "origin",
                          "eta",
-                         "bay",
-                         "gate",
+                         # "bay",
+                         # "gate",
                          "reg_no",
                          "out_flight_no",
                          "dest",
@@ -29,7 +21,7 @@ FlightType = namedtuple("FlightType",
                          "preference",
                          "current"))
 """
-Named tuple used to hold flight information
+Named tuple used to hold the flight information
 """
 
 PreferenceType = namedtuple("PreferenceType",
@@ -37,7 +29,7 @@ PreferenceType = namedtuple("PreferenceType",
                              "bays",
                              "gates"))
 """
-Named tuple used to hold flight preference information.
+Named tuple used to hold the flight preference information.
 """
 
 CurrentType = namedtuple("CurrentType",
@@ -59,9 +51,9 @@ class ft(Enum):
 
 class Flights:
     """
-    Class holding all information regarding the flights.
+    Class holding the information regarding the flights.
 
-    :param string flight_data_path: PAth to directory holding flight data.
+    :param string flight_data_path: Path to directory holding flight data.
     :param ooc.Airport airport: Airport object holding airport specific information.
     """
 
@@ -71,34 +63,47 @@ class Flights:
         class:`ooc.Airport` object.
         """
 
-        # Attach to airport object.
+        # Attach flight object to airport object.
         airport.flights = self
 
-        # Get absolute path to flight data in case a relative path was given.
+        # Get the absolute path to flight data in case a relative path was given.
         # This is to prevent any future bugs which may be caused by switching the
-        # current working directory.
+        # working directory.
         flight_data_path = abspath(flight_data_path)
 
         self.flight_data_path = normpath(join(flight_data_path, "flight_schedule.csv"))
-        """Path to csv file holing the flight data."""
+        """Path to the csv file holing the flight data."""
 
         self.preferences_path = normpath(join(flight_data_path, "preferences.csv"))
-        """Path to csv file holing the flight bay and gate preference table."""
+        """Path to the csv file holing the flight bay and gate preference table."""
 
         self.current_path = normpath(join(flight_data_path, "current.csv"))
         """Path to the csv file holding the position of the current location of overnight flights."""
 
-        self.flight_schedule = []
-        self.preferences_table = {}
-        self.current_table = {}
+        self.config_path = normpath(join(flight_data_path, "config.json"))
+        """Path to the json file holding the schedule configuration parameters."""
 
-        # load data
+        self.flight_schedule = []  #: List holding the flight schedule and information.
+        self.preferences_table = {}  #: Dictionary holding the flight preference table.
+        self.current_table = {}  #: Dictionary holding the current location of overninght flights.
+        self.config = {}  #: Dictionary holding other properties about the schedule.
+
+        # Load data files
         self.load_current()
         self.load_preferences()
         self.load_flight_data()
         self.check_duplicate_flights()
+        self.load_config()
+
+    def load_config(self):
+        with open(self.config_path) as f:
+            self.config = json.load(f)
+            self.config['date'] = datetime.strptime(self.config['date'], "%Y %m %d").date()
 
     def load_flight_data(self):
+        """
+        Loads the flight schedule csv file.
+        """
         with open(self.flight_data_path) as f:
             self.flight_schedule.clear()
 
@@ -127,12 +132,6 @@ class Flights:
                 line_nr += 1
                 # Split and strip values.
                 line_values = [None if y == "" else y for y in [x.strip() for x in line.split(",")]]
-
-                # if line_values[8] not in self.airport.domestic_airports:
-                #     continue
-                #
-                # print("{:4d} {:4s} {:4s} {:5s} {:5s}".format(
-                #     line_nr, line_values[4], line_values[5] or "None", line_values[3], line_values[9]))
 
                 # Get and check airline code. If neither an inbound
                 # nor outbound flight number was given, set airline
@@ -178,8 +177,8 @@ class Flights:
                                     in_flight_no=line_values[1],
                                     origin=line_values[2],
                                     eta=time(*[int(x) for x in line_values[3].split(":")]),  # create time obj from eta
-                                    bay=line_values[4],
-                                    gate=line_values[5],
+                                    # bay=line_values[4],
+                                    # gate=line_values[5],
                                     reg_no=line_values[6],
                                     out_flight_no=line_values[7],
                                     dest=line_values[8],
@@ -199,7 +198,6 @@ class Flights:
     def load_preferences(self):
         """
         Loads in data from the preferences csv file.
-        :return:
         """
         with open(self.preferences_path) as f:
             self.preferences_table.clear()
@@ -225,9 +223,7 @@ class Flights:
 
     def load_current(self):
         """
-        Loads in data from the current csv file.
-
-        :return:
+        Loads in data from the current csv file, holding the current location of overnight flights.
         """
         with open(self.current_path) as f:
             self.current_table.clear()
@@ -252,8 +248,14 @@ class Flights:
                 self.current_table[line_values[0]] = current
 
     def check_duplicate_flights(self):
+        """
+        Check for duplicate flights in the flight schedule data.
+        """
+
+        # Loop through all flight combinations
         for i in range(self.n_flights):
             for j in range(i+1, self.n_flights):
+                # Checks whether the flight numbers, eta and etd of the two flights are the same.
                 if (((self.flight_schedule[i].in_flight_no == self.flight_schedule[j].in_flight_no) and
                      (self.flight_schedule[i].in_flight_no is not None)) or
                     ((self.flight_schedule[i].out_flight_no == self.flight_schedule[j].out_flight_no) and
@@ -261,8 +263,7 @@ class Flights:
                     ) and \
                         (self.flight_schedule[i].eta == self.flight_schedule[j].eta) and \
                         (self.flight_schedule[i].etd == self.flight_schedule[j].etd):
-                    print("Duplicate flights {} {}".format(i, j))
-
+                    print("Warning: Duplicate flights {} {}".format(i, j))  # Print a warning
 
     @property
     def n_flights(self):
@@ -273,7 +274,7 @@ class Flights:
 
     def n_passengers(self, i):
         """
-        This is not loaded from airport_data, but is the maximum capacity of aircraft type.
+        Maximum passenger capacity for a specific flight.
 
         :param int i: Flight index
         :return: Number of passengers per flight.
@@ -312,7 +313,7 @@ class Flights:
 
     def domestic(self, i, departing=False):
         """
-        Derived from airport code in raw airport_data. It first checks the origin airport. If no
+        Derived from airport code in raw airport_data. By default it first checks the origin airport.
 
         :param int i: Flight index
         :param bool departing: If true it will first check the destination airport code.

@@ -207,7 +207,6 @@ class GateAssignment:
                         z7 += "\n   "
 
         self.eta = max_value if max_value >= self.epsilon else self.epsilon
-
         return z7
 
     def of_penalty_variables(self):
@@ -242,8 +241,8 @@ class GateAssignment:
         """
         This constraint makes sure that one gate is assigned to each departing flight.
         """
-        print(" - Constraint: Single gate to flight constraint.")
-        c = "\\ Single gate to flight constraint.\n   "
+        print(" - Constraint: Single gate per flight constraint.")
+        c = "\\ Single gate per flight constraint.\n   "
 
         # Loop through each flight.
         for i, k, flight in self.departing_flights():
@@ -286,10 +285,10 @@ class GateAssignment:
                         for l in range(self.airport.n_gates):
                             if (self.airport.bay_gate_distance[k][l] is not None) and \
                                (self.airport.bay_gate_distance[j_k][l] is not None):
-                                c += "tc_{}_{}_{}: {} + {} - {} < 2\n".format(i, j, l,
-                                                                               self.x(i, l),
-                                                                               self.x(j, l),
-                                                                               self.m(i, j, l))
+                                c += "tc_{}_{}_{}: {} + {} - {} < 1\n".format(i, j, l,
+                                                                              self.x(i, l),
+                                                                              self.x(j, l),
+                                                                              self.m(i, j, l))
 
         return c
 

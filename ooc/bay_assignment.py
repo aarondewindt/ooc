@@ -574,28 +574,29 @@ class BayAssignment:
         # Loop through all combinations of flights
         for i in range(self.flights.n_flights):
             for j in range(i + 1, self.flights.n_flights):
+                # Only add the constraint for pairs of departing flights.
+                if self.flights.departing(i) and self.flights.departing(j):
+                    # Loop through each pair of bays with adjacency constrains.
+                    for bay_pair in self.airport.adjacency:
+                        # Convert bay_pair from type tuple to list. This will give a copy we can modify.
+                        bay_pair = list(bay_pair)
 
-                # Loop through each pair of bays with adjacency constrains.
-                for bay_pair in self.airport.adjacency:
-                    # Convert bay_pair from type tuple to list. This will give a copy we can modify.
-                    bay_pair = list(bay_pair)
+                        # Loop twice, so the constraints are created for flight/bay pairs (i/1, j/2) and (i/2 and j/1).
+                        for _ in range(2):
+                            # Unpack bay_pair list
+                            bay_1, bay_2 = bay_pair
 
-                    # Loop twice, so the constraints are created for flight/bay pairs (i/1, j/2) and (i/2 and j/1).
-                    for _ in range(2):
-                        # Unpack bay_pair list
-                        bay_1, bay_2 = bay_pair
+                            # Reverse the bay_pair list so that in the next iteration bay_1 and bay_2 are swapped.
+                            bay_pair.reverse()
 
-                        # Reverse the bay_pair list so that in the next iteration bay_1 and bay_2 are swapped.
-                        bay_pair.reverse()
-
-                        # Check if flights are compliant with the bays, if not, the constraint is not needed because
-                        # the flight(s) won't be assigned to the bay anyways.
-                        if self.flights.bay_compliance(i, bay_1) and self.flights.bay_compliance(j, bay_2):
-                            # Create the constraint.
-                            c += "ad_{}_{}_{}: {} + {} - {} <= 1;\n".format(bay_1, i, j,
-                                                                            self.x(i, bay_1),
-                                                                            self.x(j, bay_2),
-                                                                            self.s(i, j, bay_1))
+                            # Check if flights are compliant with the bays, if not, the constraint is not needed because
+                            # the flight(s) won't be assigned to the bay anyways.
+                            if self.flights.bay_compliance(i, bay_1) and self.flights.bay_compliance(j, bay_2):
+                                # Create the constraint.
+                                c += "ad_{}_{}_{}: {} + {} - {} <= 1;\n".format(bay_1, i, j,
+                                                                                self.x(i, bay_1),
+                                                                                self.x(j, bay_2),
+                                                                                self.s(i, j, bay_1))
 
         c += "\n"
         return c

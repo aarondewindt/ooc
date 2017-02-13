@@ -1,30 +1,28 @@
 """
-This file is not part of the solver. Instead it was used to generate the bay gate distance matrix.
+This file is not part of the model. Instead it was used to generate the bay gate distance table.
 These distances are all based from measurements from google earth.
-
-
-
-
 
 """
 
 from collections import OrderedDict
 from io import StringIO
 
-# Simplified airport layout used by this script to calculate the distances.
+
+# The simplified airport layout used by this script to calculate the distances.
 #
-#    2                                   14      15       20
-# +--+-----------------------------------+--+----+--------+
-# |                                      |  21-25
-# + STPV1/2                              |
-# |                                      |
-# |                                      |
-# +---------+                  +---------+----------+
-#    Hotel                       J1-J5      J6-J9
+#    2                                  14   21-25  15       20
+# +--+----------------------------------+----+---------------+
+# |                                          |
+# + STPV1/2                                  |
+# |                                          |
+# |                                          |
+# +---------+                      +---------+----------+
+#    Hotel                           J1-J5      J6-J9
 #    bays
 #
 
-# Approximate distance between gate 1 and the non-remote bays.
+
+# Distance between gate 1 and the other gates and non-remote bays.
 ds_nr = [
     None,
     0,
@@ -49,7 +47,7 @@ ds_nr = [
     1001,
 ]
 
-# Distance between gate 14 and the juliet bays
+# Distance between gates 21/25 and the juliet bays
 ds_j = [
     None,
     738,
@@ -85,8 +83,6 @@ ds_stpv = 188
 # It's assumed that these gate are on the same line as the non remote bays. Between bays 14 and 15.
 ds_bussing = 740
 
-
-# Create dictionary containing the positions of each bay on the main line starting at H10 and ending at bay 20.
 
 # Dictionary of bays and to what gates they are directly connected to or index in case of the remote bays.
 bays = OrderedDict((
@@ -146,8 +142,9 @@ bay_gate_distance = OrderedDict()
 inactive_gates = [3]
 non_existing_gates = [6, 11]
 
+# Loop through all bays
 for bay_name, i in bays.items():
-    if bay_name.startswith("H"):
+    if bay_name.startswith("H"):  # Check whether this is a Hotel bay.
         # Position relative to gate 1
         pg1 = -1 * ds_h[i]
 
@@ -169,8 +166,7 @@ for bay_name, i in bays.items():
 
         bay_gate_distance[bay_name] = ds_gates
 
-
-    elif bay_name.startswith("J"):
+    elif bay_name.startswith("J"):  # Check whether ths is a Juliet bay.
         # Position relative to bussing area
         pg14 = ds_j[i]
 
@@ -192,7 +188,7 @@ for bay_name, i in bays.items():
 
         bay_gate_distance[bay_name] = ds_gates
 
-    elif bay_name.startswith("SPV"):
+    elif bay_name.startswith("SPV"):  # Check whether this is a state pavilion bay
         # Array holding the distance to each gate.
         ds_gates = []
 
@@ -210,7 +206,7 @@ for bay_name, i in bays.items():
             ds_gates.append(str(ds_stpv + ds_bussing))
 
         bay_gate_distance[bay_name] = ds_gates
-    else:
+    else:  # This is a non-remote bay.
         # distance to gate 1
         dsg1 = ds_nr[i]
 
@@ -236,12 +232,11 @@ for bay_name, i in bays.items():
 sio = StringIO()
 
 # Write header
-
 sio.write("bay , ")
 
 
 def gate_header():
-    """Yield strings containing the names of each gate."""
+    """Generator yielding strings containing the names of each gate."""
     for i in range(1, 26):
         if i in non_existing_gates:
             continue
@@ -250,12 +245,15 @@ def gate_header():
 sio.write(", ".join(gate_header()))
 sio.write("\n")
 
+# Loop through each bay.
 for bay_name, ds_gates in bay_gate_distance.items():
     def foo():
+        """Generator yielding the distance to each gate."""
         for i in range(0, 23):
             yield "{:>4}".format(ds_gates[i])
     sio.write("{:4}, ".format(bay_name))
     sio.write(", ".join(foo()))
     sio.write("\n")
 
+# Print the final table.
 print(sio.getvalue())
