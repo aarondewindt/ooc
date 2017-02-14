@@ -1,4 +1,5 @@
 from datetime import datetime, time
+from math import isclose
 
 
 class GateAssignment:
@@ -127,7 +128,7 @@ class GateAssignment:
         if (self.bay[i] in self.airport.remote_bays) and (l in self.airport.bussing_gates):
             return True
         else:
-            return self.airport.bay_gate_distance[self.bay[i]][l] == 0
+            return isclose(self.airport.bay_gate_distance[self.bay[i]][l], 0.0)
 
     def has_preference(self, i, l):
         if self.flights.flight_schedule[i].preference is not None:
@@ -141,7 +142,7 @@ class GateAssignment:
             if self.has_preference(i, l):
                 return 1
             else:
-                return 0.8
+                return 0.99
         else:
             if self.has_preference(i, l):
                 return 0.5

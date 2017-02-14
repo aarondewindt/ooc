@@ -53,3 +53,21 @@ class FlightSolution:
                 value = type_conversion(value) if type_conversion is not None else value
             s += "{name:>{width}}  ".format(name=value, width=width)
         return s + "\n"
+
+    def csv_heading(self):
+        return ",".join(["{name:>{width}}  ".format(name=name, width=width) for name, width, _ in self.cols]) + "\n"
+
+    def csv_data(self):
+        s = ""
+
+        def row_generator():
+            for name, width, type_conversion in self.cols:
+                value = getattr(self, name)
+                value = "" if value is None else value
+                if value is None:
+                    value = ""
+                else:
+                    value = type_conversion(value) if type_conversion is not None else value
+                yield "{name:>{width}}  ".format(name=value, width=width)
+
+        return ",".join(row_generator()) + "\n"

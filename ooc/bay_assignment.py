@@ -215,7 +215,7 @@ class BayAssignment:
                                 z2 += "\n    "
         return z2
 
-    def penalty_values(self):
+    def of_penalty_values(self):
         """
         Add the penalty values to the objective function.
 
@@ -281,7 +281,7 @@ class BayAssignment:
         # Create complete objective function by combining the three individual objective functions.
         return "Minimize\n{}\n\n{}\n{}\n{}\n".format(self.of_min_passenger_transport_distance(),
                                                      self.of_max_airline_preference(),
-                                                     self.penalty_values(),
+                                                     self.of_penalty_values(),
                                                      self.of_adjacency_penalties())
 
     def binary_decision_variables_declaration(self):

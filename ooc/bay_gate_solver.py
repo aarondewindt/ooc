@@ -60,6 +60,7 @@ class BayGateSolver:
         self.bay_sol_path = normpath(join(self.workspace_path, "bay.sol"))
         self.gate_lp_path = normpath(join(self.workspace_path, "gate.lp"))
         self.gate_sol_path = normpath(join(self.workspace_path, "gate.sol"))
+        self.result_path = normpath(join(self.workspace_path, "result.csv"))
 
         # Check whether we can access cplex from the command line.
         try:
@@ -85,7 +86,7 @@ class BayGateSolver:
             with open(join(self.workspace_path, ".gitignore"), "w") as f:
                 # For now ignore everything. At some point I'm gonna change this so it keeps
                 # the final results.
-                f.write("""*""")
+                f.write("""*\n!result.csv""")
 
     def init_solution_list(self):
         """
@@ -245,6 +246,14 @@ class BayGateSolver:
             s += solution.str_data()
 
         print(s)
+
+    def save_csv(self):
+        s = self.solutions[0].csv_heading()
+        for solution in self.solutions:
+            s += solution.csv_data()
+
+        with open(self.result_path, "w") as f:
+            f.write(s)
 
     def create_bay_assignment_chart(self):
         fig = plt.figure(figsize=(8, 8))

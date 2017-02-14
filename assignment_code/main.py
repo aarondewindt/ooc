@@ -22,6 +22,7 @@ def main():
     # solver.solve_gate_assignment()
     solver.load_gate_assignment_solution()
     solver.print_solution()
+    solver.save_csv()
     bay_fig = solver.create_bay_assignment_chart()
     gate_fig = solver.create_gate_assignment_chart()
 

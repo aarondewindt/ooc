@@ -94,7 +94,7 @@ class MyTestCase(unittest.TestCase):
 
         bay_assignment.constraint_adjacency()
         bay_assignment.constraint_splitted_flight()
-        code = bay_assignment.penalty_values()
+        code = bay_assignment.of_penalty_values()
         # print(code)
 
 
