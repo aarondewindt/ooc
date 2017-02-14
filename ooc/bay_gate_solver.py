@@ -168,8 +168,6 @@ class BayGateSolver:
         for i, solution in enumerate(self.solutions):
             assert solution.bay is not None, "Flight {} has no bay assigned to it.".format(i)
 
-
-
     def solve_gate_assignment(self):
         bays = [solution.bay_idx for solution in self.solutions]
         if bays[0] is None:
@@ -251,31 +249,39 @@ class BayGateSolver:
     def create_bay_assignment_chart(self):
         fig = plt.figure(figsize=(8, 8))
         plt.yticks(range(self.airport.n_bays), self.airport.bay_names)
-        plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
-                  datetime.combine(self.flights.config['date'], time(23, 59, 59))])
+        # plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
+        #           datetime.combine(self.flights.config['date'], time(23, 59, 59))])
 
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         plt.gca().xaxis.set_major_locator(mdates.HourLocator())
 
-        last_color = 1
+        colors = [
+            ("#17becf", "#5edfed"),
+            ("#bcbd22", "#e4e467"),
+            ("#8c564b", "#c1948b"),
+            ("#ff7f0e", "#ffa04d"),
+            ("#d62728", "#e36868"),
+            ("#7f7f7f", "#a6a6a6"),
+            ("#2ca02c", "#73d973"),
+            ("#9467bd", "#b395d0"),
+            ("#e377c2", "#eeaad9"),
+        ]
+
+        color_idx = 1
 
         for i, solution in enumerate(self.solutions):
             if solution.flight_type is ft.Arr:
-                last_color = (last_color + 1) % 9 + 1
-                color = last_color
-            elif solution.flight_type is ft.Full:
-                color = 0
+                color_idx = (color_idx + 1) % 9
+
+            if solution.flight_type is ft.Full:
+                color = "#1f77b4"
+            else:
+                color = colors[color_idx][solution.flight_type == ft.Park]
+
             eta = solution.eta
             etd = solution.etd
-            if eta > etd:
-                plt.plot([eta, etd + timedelta(days=1)],
-                         [solution.bay_idx] * 2,
-                         [eta - timedelta(days=1), etd],
-                         [solution.bay_idx] * 2
-                         , color="C{}".format(color), linewidth=4)
-            else:
-                plt.plot([eta, etd],
-                         [solution.bay_idx] * 2, color="C{}".format(color), linewidth=4)
+            plt.plot([eta, etd],
+                     [solution.bay_idx] * 2, color=color, linewidth=4)
 
         plt.grid(True, color='0.85')
         plt.gcf().autofmt_xdate()

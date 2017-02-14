@@ -14,12 +14,12 @@ def main():
         abs_path("schedule_2015_06_02"),
         jid="workspace_2015_06_02",
         buffer_time=timedelta(minutes=15),
-        spare_bays=['J2B']
+        spare_bays=['J2A', 'J2B']
     )
 
-    solver.solve_bay_assignment()
+    # solver.solve_bay_assignment()
     solver.load_bay_assignment_solution()
-    solver.solve_gate_assignment()
+    # solver.solve_gate_assignment()
     solver.load_gate_assignment_solution()
     solver.print_solution()
     bay_fig = solver.create_bay_assignment_chart()

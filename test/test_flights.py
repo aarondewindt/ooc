@@ -9,7 +9,7 @@ def abs_path(rel_path):
     """
     Returns an absolute path to a file relative to this file.
 
-    :param rel_path: PAth relative to this file
+    :param rel_path: Path relative to this file
     :return: Absolute path
     """
     return os.path.normpath(os.path.join(os.path.abspath(os.path.dirname(__file__)), rel_path))
