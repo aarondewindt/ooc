@@ -1,39 +1,37 @@
-from collections import namedtuple
+from recordclass import recordclass
 from enum import Enum
 from os.path import abspath, join, normpath
 from datetime import time, date, datetime, timedelta
 import json
 
 
-FlightType = namedtuple("FlightType",
-                        ("flight_type",
-                         "in_flight_no",
-                         "origin",
-                         "eta",
-                         # "bay",
-                         # "gate",
-                         "reg_no",
-                         "out_flight_no",
-                         "dest",
-                         "etd",
-                         "ac_type",
-                         "airline",
-                         "preference",
-                         "current"))
+FlightType = recordclass("FlightType",
+                         ("flight_type",
+                          "in_flight_no",
+                          "origin",
+                          "eta",
+                          "reg_no",
+                          "out_flight_no",
+                          "dest",
+                          "etd",
+                          "ac_type",
+                          "airline",
+                          "preference",
+                          "current"))
 """
 Named tuple used to hold the flight information
 """
 
-PreferenceType = namedtuple("PreferenceType",
-                            ("dest",
-                             "bays",
-                             "gates"))
+PreferenceType = recordclass("PreferenceType",
+                             ("dest",
+                              "bays",
+                              "gates"))
 """
 Named tuple used to hold the flight preference information.
 """
 
-CurrentType = namedtuple("CurrentType",
-                         ("bay",))
+CurrentType = recordclass("CurrentType",
+                          ("bay",))
 """
 Named tuple used to hold the current location of overnight flights.
 """
@@ -106,6 +104,7 @@ class Flights:
         self.load_preferences()
         self.load_flight_data()
         self.check_duplicate_flights()
+        self.process_overnight_flights()
 
     def load_config(self):
         with open(self.config_path) as f:
@@ -258,6 +257,30 @@ class Flights:
 
                 current = CurrentType(bay=bay_index)
                 self.current_table[line_values[0]] = current
+
+    def process_overnight_flights(self):
+        """
+        Since the schedule does not have the date information for the flight's eta and etd they will
+        all be loaded in on the same date. This is not true for overnight flights that arrived on the previous
+        day. This function fixes the eta and etd dates for overnight flights.
+
+        :return:
+        """
+        # Loop through all flights.
+        for i, flight in enumerate(self.flight_schedule):
+            # Check if it's an
+            if self.is_overnight(i):
+                if flight.flight_type == ft.Arr:
+                    previous_part_overnight = False
+                    for j in [2, 1, 0]:
+                        if previous_part_overnight:
+                            self.flight_schedule[i + j].eta -= timedelta(days=1)
+                            self.flight_schedule[i + j].etd -= timedelta(days=1)
+                        if self.flight_schedule[i+j].eta > self.flight_schedule[i+j].etd:
+                            self.flight_schedule[i + j].eta -= timedelta(days=1)
+                            previous_part_overnight = True
+                if flight.flight_type == ft.Full:
+                    self.flight_schedule[i].eta -= timedelta(days=1)
 
     def check_duplicate_flights(self):
         """
@@ -412,10 +435,28 @@ class Flights:
         :param i: Flight id
         :return: A boolean indicating whether a flight is an overnight flight or not.
         """
+
         f = self.flight_schedule[i]
+
+        # This will be valid for general use.
+        if f.flight_type == ft.Full:
+            if f.eta.day != f.etd.day:
+                return True
+        else:
+            i -= [ft.Arr, ft.Park, ft.Dep].index(f.flight_type)
+            if (f.etd.day != f.eta.day) or \
+                   (self.flight_schedule[i+1].etd.day != self.flight_schedule[i+1].eta.day) or \
+                   (self.flight_schedule[i+2].etd.day != self.flight_schedule[i+2].eta.day):
+                return True
+
+        # Since the schedule does not contain information on which day the flights eta and etd are. The will
+        # both be loaded in on the same day. This part of the function is used to detect overnight flights in
+        # this scenario. This is then used by the process_overnight_flights() to fix the dates for overnight
+        # flights.
         if f.flight_type == ft.Full:
             return f.etd < f.eta
-        if f.flight_type == ft.Arr:
+        else:
+            i -= [ft.Arr, ft.Park, ft.Dep].index(f.flight_type)
             return (f.etd < f.eta) or \
                    (self.flight_schedule[i+1].etd < self.flight_schedule[i+1].eta) or \
                    (self.flight_schedule[i+2].etd < self.flight_schedule[i+2].eta)
