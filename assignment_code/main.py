@@ -1,5 +1,6 @@
 import os
 import matplotlib.pyplot as plt
+from datetime import timedelta
 
 from ooc import BayGateSolver
 from ooc.print_color import pr_g
@@ -11,12 +12,14 @@ def main():
     solver = BayGateSolver(
         abs_path("jomo_kenyatta_international_airport"),
         abs_path("schedule_2015_06_02"),
-        jid="workspace_2015_06_02"
+        jid="workspace_2015_06_02",
+        buffer_time=timedelta(minutes=15),
+        spare_bays=['J2B']
     )
 
-    # solver.solve_bay_assignment()
+    solver.solve_bay_assignment()
     solver.load_bay_assignment_solution()
-    # solver.solve_gate_assignment()
+    solver.solve_gate_assignment()
     solver.load_gate_assignment_solution()
     solver.print_solution()
     bay_fig = solver.create_bay_assignment_chart()

@@ -225,7 +225,7 @@ class BayAssignment:
         print(" - Objective function: Penalty values.")
 
         of = "// Penalty values.\n   "
-        for penalty_list in [self.u_list, self.v_list, self.w_list, self.s_list]:
+        for penalty_list in [self.u_list, self.v_list, self.w_list]:
             for penalty_name in penalty_list:
                 # The constant will just be the objective function's weight factor.
                 constant = self.gamma
@@ -240,15 +240,49 @@ class BayAssignment:
                     of += "\n   "
         return of + "\n"
 
+    def of_adjacency_penalties(self):
+        print(" - Objective function: Adjacency penalties.")
+
+        of = "// Adjacency penalties.\n   "
+
+        for s_variable in self.s_list:
+            # Parse the variable name to get the flight and bay indices.
+            i, j, k = [int(x) for x in s_variable.split("_")[1:]]
+
+            # Find the smallest penalty for putting one of thee flights on a
+            # remote bay.
+            min_value = float('inf')
+            for remote_k in self.airport.remote_bays:
+                value = self.flights.n_passengers(i) \
+                        * self.airport.terminal_bay_distance(self.flights.terminal(i),
+                                                             remote_k) \
+                        * self.alpha
+                min_value = value if value < min_value else min_value
+
+                value = self.flights.n_passengers(j) \
+                        * self.airport.terminal_bay_distance(self.flights.terminal(i),
+                                                             remote_k) \
+                        * self.alpha
+                min_value = value if value < min_value else min_value
+
+            of += " +{:<15.4f} {:10s}".format(min_value, s_variable)
+
+            # Add new line if necessary
+            if (not self.compact) or (len(of.split("\n")[-1]) > self.line_width_limit):
+                of = of.rstrip()
+                of += "\n   "
+        return of + "\n"
+
     def objective_function(self):
         """
         :return: The total bay assignment objective function.
         :rtype: string
         """
         # Create complete objective function by combining the three individual objective functions.
-        return "Minimize\n{}\n\n{}\n{}\n".format(self.of_min_passenger_transport_distance(),
-                                                 self.of_max_airline_preference(),
-                                                 self.penalty_values())
+        return "Minimize\n{}\n\n{}\n{}\n{}\n".format(self.of_min_passenger_transport_distance(),
+                                                     self.of_max_airline_preference(),
+                                                     self.penalty_values(),
+                                                     self.of_adjacency_penalties())
 
     def binary_decision_variables_declaration(self):
         """

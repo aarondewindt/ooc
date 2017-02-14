@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import datetime, time
 
 
 class GateAssignment:
@@ -327,7 +327,7 @@ class GateAssignment:
     def constraint_kq_after_6pm(self):
         print(" - Constraint: KQ flights after 6pm.")
         c = "\\ Constraints for KQ flights after 6pm\n   "
-        time_6pm = time(hour=18)
+        time_6pm = datetime.combine(self.flights.config['date'], time(hour=18))
 
         non_kq_gates = ['4', '5', '7', '8', '9', '10']
         for i, gate_name in enumerate(non_kq_gates):

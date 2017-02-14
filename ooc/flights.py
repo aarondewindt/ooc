@@ -1,7 +1,7 @@
 from collections import namedtuple
 from enum import Enum
 from os.path import abspath, join, normpath
-from datetime import time, date, datetime
+from datetime import time, date, datetime, timedelta
 import json
 
 
@@ -55,13 +55,25 @@ class Flights:
 
     :param string flight_data_path: Path to directory holding flight data.
     :param ooc.Airport airport: Airport object holding airport specific information.
+    :param datetime.timedelta buffer_time: Amount of buffer time to add before and after
+       each flight.
     """
 
-    def __init__(self, flight_data_path, airport):
+    def __init__(self, flight_data_path, airport, buffer_time=None, spare_bays=None):
         self.airport = airport
         """
         class:`ooc.Airport` object.
         """
+        # If no buffer time was given then, set it to zero.
+        self.buffer_time = buffer_time or timedelta(0)
+
+        self.spare_bays = []
+
+        if spare_bays is not None:
+            for bay_name in spare_bays:
+                if bay_name not in self.airport.bay_names:
+                    raise Exception("Spare bay '{}' is invalid.".format(bay_name))
+                self.spare_bays.append(self.airport.bay_names.index(bay_name))
 
         # Attach flight object to airport object.
         airport.flights = self
@@ -89,11 +101,11 @@ class Flights:
         self.config = {}  #: Dictionary holding other properties about the schedule.
 
         # Load data files
+        self.load_config()
         self.load_current()
         self.load_preferences()
         self.load_flight_data()
         self.check_duplicate_flights()
-        self.load_config()
 
     def load_config(self):
         with open(self.config_path) as f:
@@ -176,13 +188,13 @@ class Flights:
                 flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.
                                     in_flight_no=line_values[1],
                                     origin=line_values[2],
-                                    eta=time(*[int(x) for x in line_values[3].split(":")]),  # create time obj from eta
+                                    eta=datetime(*self.config['date'].timetuple()[:3], *[int(x) for x in line_values[3].split(":")]),  # create time obj from eta
                                     # bay=line_values[4],
                                     # gate=line_values[5],
                                     reg_no=line_values[6],
                                     out_flight_no=line_values[7],
                                     dest=line_values[8],
-                                    etd=time(*[int(x) for x in line_values[9].split(":")]),  # create time obj from etd
+                                    etd=datetime(*self.config['date'].timetuple()[:3], *[int(x) for x in line_values[9].split(":")]),  # create time obj from etd
                                     ac_type=line_values[10],
                                     airline=airline_code,
                                     preference=flight_preference,
@@ -359,18 +371,26 @@ class Flights:
         fi = self.flight_schedule[i]
         fj = self.flight_schedule[j]
 
+        # Add buffer times.
+        # Only add a preceding buffer time period to arrival and full flights.
+        # Only add a trailing buffer time period to departure and full flights.
+        fi_eta = fi.eta - (self.buffer_time if self.flight_schedule[i].flight_type in [ft.Arr, ft.Full] else timedelta(0))
+        fj_eta = fj.eta - (self.buffer_time if self.flight_schedule[j].flight_type in [ft.Arr, ft.Full] else timedelta(0))
+        fi_etd = fi.etd + (self.buffer_time if self.flight_schedule[i].flight_type in [ft.Dep, ft.Full] else timedelta(0))
+        fj_etd = fj.etd + (self.buffer_time if self.flight_schedule[j].flight_type in [ft.Dep, ft.Full] else timedelta(0))
+
         # Some long stay flights are parked during the night to the next day.
-        if (fi.eta < fi.etd) and (fj.eta < fj.etd):
+        if (fi_eta < fi_etd) and (fj_eta < fj_etd):
             # Neither is a overnight flight.
-            return (fi.eta <= fj.etd) and (fj.eta <= fi.etd)
+            return (fi_eta <= fj_etd) and (fj_eta <= fi_etd)
 
-        elif (fi.eta >= fi.etd) and (fj.eta <= fj.etd):
+        elif (fi_eta >= fi_etd) and (fj_eta <= fj_etd):
             # flight i is an overnight flight.
-            return (fi.eta <= fj.etd) or (fj.eta <= fi.etd)
+            return (fi_eta <= fj_etd) or (fj_eta <= fi_etd)
 
-        elif (fi.eta <= fi.etd) and (fj.eta >= fj.etd):
+        elif (fi_eta <= fi_etd) and (fj_eta >= fj_etd):
             # flight j is an overnight flight.
-            return (fj.eta <= fi.etd) or (fi.eta <= fj.etd)
+            return (fj_eta <= fi_etd) or (fi_eta <= fj_etd)
 
         else:
             # Both are overnight flights, so they are time conflicting.
@@ -382,6 +402,8 @@ class Flights:
         :param int k: Bay index
         :return: True if the aircraft type for this flight complies with the bay used.
         """
+        if k in self.spare_bays:
+            return False
         ac_group = self.airport.aircraft[self.flight_schedule[i].ac_type].group
         return self.airport.bay_compliance_matrix[k][ac_group]
 

@@ -15,22 +15,25 @@ from ooc.key_pair_dictionary import KeyPairDictionary
 
 class BayGateSolver:
     """
-    This class is used to generate and solve the bay gate assignment
-    problem.
+    This class is used to generate and solve the bay and gate assignment
+    problems.
 
     :param string airport_path: Path to directory holding the airport data
-
     :param string flights_path: Path to directory holding the flights data.
+    :param datetime.timedelta buffer_time: Amount of buffer time to add before and after
+       each flight.
     """
 
-    def __init__(self, airport_data_path, flights_data_path, jid, cplex_command="cplex"):
+    def __init__(self, airport_data_path, flights_data_path, jid, cplex_command="cplex", buffer_time=None,
+                 spare_bays=None):
         self.airport = Airport(airport_data_path=airport_data_path)
         """"
         class:`ooc.Airport` object of holding the information of
         the target airport.
         """
 
-        self.flights = Flights(flight_data_path=flights_data_path, airport=self.airport)
+        self.flights = Flights(flight_data_path=flights_data_path, airport=self.airport, buffer_time=buffer_time,
+                               spare_bays=spare_bays)
         """
         class:`ooc.Flights` object holding the information of all
         flights of the day
@@ -95,7 +98,7 @@ class BayGateSolver:
             solution.flight_type = flight.flight_type
             solution.in_flight_no = flight.in_flight_no
             solution.origin = flight.origin
-            solution.eta = flight.eta  #
+            solution.eta = flight.eta
             solution.reg_no = flight.reg_no
             solution.out_flight_no = flight.out_flight_no
             solution.dest = flight.dest
@@ -246,7 +249,7 @@ class BayGateSolver:
         print(s)
 
     def create_bay_assignment_chart(self):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 8))
         plt.yticks(range(self.airport.n_bays), self.airport.bay_names)
         plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
                   datetime.combine(self.flights.config['date'], time(23, 59, 59))])
@@ -262,23 +265,25 @@ class BayGateSolver:
                 color = last_color
             elif solution.flight_type is ft.Full:
                 color = 0
-            eta = datetime.combine(self.flights.config['date'], solution.eta)
-            etd = datetime.combine(self.flights.config['date'], solution.etd)
+            eta = solution.eta
+            etd = solution.etd
             if eta > etd:
                 plt.plot([eta, etd + timedelta(days=1)],
                          [solution.bay_idx] * 2,
                          [eta - timedelta(days=1), etd],
                          [solution.bay_idx] * 2
-                         , color="C{}".format(color))
+                         , color="C{}".format(color), linewidth=4)
             else:
                 plt.plot([eta, etd],
-                         [solution.bay_idx] * 2, color="C{}".format(color))
+                         [solution.bay_idx] * 2, color="C{}".format(color), linewidth=4)
 
+        plt.grid(True, color='0.85')
         plt.gcf().autofmt_xdate()
+        plt.tight_layout()
         return fig
 
     def create_gate_assignment_chart(self):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 8))
         plt.yticks(range(self.airport.n_gates), self.airport.gate_names)
         plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
                   datetime.combine(self.flights.config['date'], time(23, 59, 59))])
@@ -307,13 +312,14 @@ class BayGateSolver:
                     dy += 1
                 line_dy[i] = dy
 
-                eta = datetime.combine(self.flights.config['date'], solution.eta)
-                etd = datetime.combine(self.flights.config['date'], solution.etd)
+                dy = (-1)**dy * ((dy+1) // 2)
+
+                eta = solution.eta
+                etd = solution.etd
                 plt.plot([eta, etd],
-                         [solution.gate_idx - 0.2*dy] * 2)
+                         [solution.gate_idx - 0.2 * dy] * 2, linewidth=4)
 
+        plt.grid(True, color='0.85')
         plt.gcf().autofmt_xdate()
+        plt.tight_layout()
         return fig
-
-
-
