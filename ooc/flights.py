@@ -105,6 +105,7 @@ class Flights:
         self.load_flight_data()
         self.check_duplicate_flights()
         self.process_overnight_flights()
+        self.process_flight_preferences()
 
     def load_config(self):
         with open(self.config_path) as f:
@@ -162,18 +163,7 @@ class Flights:
                 if airline_code is None:
                     airline_code = self.flight_schedule[-1].airline
 
-                # Find flight preference.
-                flight_nos = [line_values[1], line_values[7]]
-                flight_preference = None
-                for flight_no in flight_nos:
-                    if flight_no is None:
-                        continue
-                    for flight_pref_no in self.preferences_table:
-                        if flight_no.startswith(flight_pref_no) and line_values[8] == self.preferences_table[flight_pref_no].dest:
-                            flight_preference = self.preferences_table[flight_pref_no]
-                            break
-                    if flight_preference is not None:
-                        break
+
 
                 # Find current location if known.
                 current_location = None
@@ -184,7 +174,7 @@ class Flights:
                         current_location = self.current_table[flight_no]
 
                 # Create flight object.
-                flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.
+                flight = FlightType(flight_type=ft[line_values[0]],  # Get ft enumerator.,
                                     in_flight_no=line_values[1],
                                     origin=line_values[2],
                                     eta=datetime(*self.config['date'].timetuple()[:3], *[int(x) for x in line_values[3].split(":")]),  # create time obj from eta
@@ -196,7 +186,7 @@ class Flights:
                                     etd=datetime(*self.config['date'].timetuple()[:3], *[int(x) for x in line_values[9].split(":")]),  # create time obj from etd
                                     ac_type=line_values[10],
                                     airline=airline_code,
-                                    preference=flight_preference,
+                                    preference=None,
                                     current=current_location)
 
                 # Check if the aircraft type is valid
@@ -257,6 +247,40 @@ class Flights:
 
                 current = CurrentType(bay=bay_index)
                 self.current_table[line_values[0]] = current
+
+    def process_flight_preferences(self):
+        for i, flight in enumerate(self.flight_schedule):
+            # Find flight_nos
+            in_flight = [None, None]
+            out_flight = [None, None]
+            if flight.flight_type in [ft.Arr, ft.Park, ft.Dep]:
+                j = [ft.Arr, ft.Park, ft.Dep].index(flight.flight_type)
+                in_flight[0] = self.flight_schedule[i - j].in_flight_no
+                in_flight[1] = self.flight_schedule[i - j].origin
+                out_flight[0] = self.flight_schedule[i + 2 - j].out_flight_no
+                out_flight[1] = self.flight_schedule[i + 2 - j].dest
+            else:
+                in_flight[0] = flight.in_flight_no
+                in_flight[1] = flight.origin
+                out_flight[0] = flight.out_flight_no
+                out_flight[1] = flight.dest
+
+            # Find flight preference.
+            flight_preference = None
+            for flight_no, airport_code in [in_flight, out_flight]:
+                if flight_no is None:
+                    continue
+                for flight_pref_no in self.preferences_table:
+                    if flight_no.startswith(flight_pref_no) and airport_code == self.preferences_table[flight_pref_no].dest:
+                        flight_preference = self.preferences_table[flight_pref_no]
+                        break
+                if flight_preference is not None:
+                    break
+
+            self.flight_schedule[i].preference = flight_preference
+
+
+
 
     def process_overnight_flights(self):
         """
@@ -462,12 +486,12 @@ class Flights:
                    (self.flight_schedule[i+2].etd < self.flight_schedule[i+2].eta)
 
     def beta(self):
-        beta = 0
+        return self.gamma() * 3
+
+    def gamma(self):
+        gamma = 0
         for i in range(self.n_flights):
             max_distance = self.airport.max_distance[self.terminal(i)]
             n_passengers = self.n_passengers(i)
-            beta += max_distance * n_passengers
-        return beta
-
-    def gamma(self):
-        return self.beta() * 3
+            gamma += max_distance * n_passengers
+        return gamma

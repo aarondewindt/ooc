@@ -142,10 +142,10 @@ class GateAssignment:
             if self.has_preference(i, l):
                 return 1
             else:
-                return 1
+                return 0.8
         else:
             if self.has_preference(i, l):
-                return 0.5
+                return 0.9
             return None
 
     def of_min_bay_gate_distance(self):

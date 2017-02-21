@@ -177,6 +177,12 @@ class BayAssignment:
 
         return z1
 
+    def preference(self, i, k):
+        if k in self.flights.flight_schedule[i].preference.bays:
+            return 1
+        else:
+            return None
+
     def of_max_airline_preference(self):
         """
         This objective function will add a term for each not-preferred bay assignment.
@@ -197,18 +203,21 @@ class BayAssignment:
             if self.flights.flight_schedule[i].preference is not None:
                 # Add a term for each bay the flight has NO preference for.
                 for k in range(self.airport.n_bays):
-                    if k not in self.flights.flight_schedule[i].preference.bays:
-
-                        # Only add terms for flight bay combinations that are valid.
-                        if self.flights.bay_compliance(i, k):
-
+                    # Only add terms for flight bay combinations that are valid.
+                    if self.flights.bay_compliance(i, k):
+                        if i == 173:
+                            print(i, k, self.preference(i, k))
+                        preference = self.preference(i, k)
+                        # Only add a term for flights with preference.
+                        if preference is not None:
                             # The constant will just be the objective function's weight factor.
-                            constant = self.beta
+                            constant = self.beta * preference
 
                             # Generate string with the decision variable and it's constant
                             # and add it to the objective function.
-                            z2 += " +{:<15.4f} {:10s}".format(constant, self.x(i, k))
-
+                            z2 += " -{:<15.4f} {:10s}".format(constant, self.x(i, k))
+                            if i == 173:
+                                print(i, k, " -{:<15.4f} {:10s}".format(constant, self.x(i, k)))
                             # Add new line if necessary
                             if (not self.compact) or (len(z2.split("\n")[-1]) > self.line_width_limit):
                                 z2 = z2.rstrip()

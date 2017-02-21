@@ -4,7 +4,9 @@
 
 class FlightSolution:
     """This class holds the solution of a single flight."""
-    def __init__(self, idx):
+    def __init__(self, idx, bay_gate_solver):
+        self.airport = bay_gate_solver.airport
+        self.flights = bay_gate_solver.flights
         self.idx = idx
         self.flight_type = None  #:
         self.in_flight_no = None  #:
@@ -15,12 +17,21 @@ class FlightSolution:
         self.dest = None  #:
         self.etd = None  #:
         self.ac_type = None  #:
+        self.pref = None
 
         self.bay = None  #: Assigned bay
         self.gate = None  #: Assigned gate
 
         self.bay_idx = None  #: Assigned bay index
         self.gate_idx = None  #: Assigned gate index
+
+        def preference_to_str(preference):
+            if preference != "":
+                return "{:3}, ({}), ({})".format(preference.dest,
+                                                 ";".join([self.airport.bay_names[k] for k in preference.bays]),
+                                                 ";".join([self.airport.gate_names[j] for j in preference.gates]),)
+            else:
+                return ""
 
         self.cols = [("idx", 3, None),
                      ("flight_type", 11, lambda x: str(x)),
@@ -33,7 +44,8 @@ class FlightSolution:
                      ("out_flight_no", 13, None),
                      ("dest", 4, None),
                      ("etd", 5, lambda x: x.strftime("%H:%M")),
-                     ("ac_type", 7, None)]
+                     ("ac_type", 7, None),
+                     ("pref", 10, preference_to_str)]
 
     def str_heading(self):
         s = ""

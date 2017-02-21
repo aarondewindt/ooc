@@ -17,9 +17,9 @@ def main():
         spare_bays=['J2A', 'J2B']
     )
 
-    solver.solve_bay_assignment()
+    # solver.solve_bay_assignment()
     solver.load_bay_assignment_solution()
-    solver.solve_gate_assignment()
+    # solver.solve_gate_assignment()
     solver.load_gate_assignment_solution()
     solver.print_solution()
     solver.save_csv()

@@ -9,6 +9,7 @@ from datetime import timedelta, datetime, time
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 
+
 from ooc import print_color
 
 from ooc import Airport, Flights, BayAssignment, FlightSolution, GateAssignment, ft
@@ -111,7 +112,7 @@ class BayGateSolver:
         Initializes the list that will hold the solution eventually.
         """
         for i, flight in enumerate(self.flights.flight_schedule):
-            solution = FlightSolution(i)
+            solution = FlightSolution(i, self)
             self.solutions.append(solution)
 
             solution.flight_type = flight.flight_type
@@ -123,6 +124,7 @@ class BayGateSolver:
             solution.dest = flight.dest
             solution.etd = flight.etd
             solution.ac_type = flight.ac_type
+            solution.pref = flight.preference
 
     def solve_bay_assignment(self):
         """
@@ -174,7 +176,7 @@ class BayGateSolver:
                 _, i, k = name.split("_")
                 i = int(i)  # Flight index
                 k = int(k)  # Bay index
-                assigned = bool(int(element.get("value")))  # If True, than flight i has been assigned to bay k.
+                assigned = bool(round(float(element.get("value"))))  # If True, than flight i has been assigned to bay k
                 if assigned:
                     if self.solutions[i].bay_idx is None:
                         self.solutions[i].bay_idx = k
@@ -237,7 +239,7 @@ class BayGateSolver:
                 _, i, l = name.split("_")
                 i = int(i)  # Flight index
                 l = int(l)  # Gate index
-                assigned = bool(int(element.get("value")))  # If True, than flight i has been assigned to bay k.
+                assigned = bool(round(float(element.get("value"))))  # If True, than flight i has been assigned to bay k.
                 if assigned:
                     # Check that no gate has been assigned to this flight yet.
                     if self.solutions[i].gate_idx is None:
@@ -298,6 +300,8 @@ class BayGateSolver:
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         plt.gca().xaxis.set_major_locator(mdates.HourLocator())
 
+        reposition_idx = 0
+
         # Loop through each solution
         for i, solution in enumerate(self.solutions):
             # Set the color based on flight type.
@@ -327,6 +331,11 @@ class BayGateSolver:
             etd = solution.etd
             plt.plot([eta, etd],
                      [solution.bay_idx] * 2, color=color, linewidth=4, linestyle=linestyle)
+
+            if repositioned and solution.flight_type is ft.Arr:
+                plt.text(eta, solution.bay_idx,  reposition_idx,
+                         verticalalignment='center', horizontalalignment='right', )
+                reposition_idx += 1
 
         # Configure plot's title, labels, legend, layout,  etc.
         plt.grid(True, color='0.85')
