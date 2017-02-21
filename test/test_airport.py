@@ -132,6 +132,14 @@ class TestAirport(unittest.TestCase):
         self.assertAlmostEquals(airport.bay_gate_distance[26][13], 742.0)
         self.assertAlmostEquals(airport.bay_gate_distance[14][22], 279.0)
 
+    def test_load_remote_bays(self):
+        airport = Airport(abs_path("./airport_data"))
+        self.assertIn(24, airport.remote_bays)
+        self.assertIn(25, airport.remote_bays)
+        self.assertIn(26, airport.remote_bays)
+        self.assertIn(33, airport.remote_bays)
+        self.assertIn(35, airport.remote_bays)
+
     def test_load_adjacency(self):
         """
         Checks whether the adjacency matrix has been loaded correctly.

@@ -151,7 +151,7 @@ class BayAssignment:
         for i in range(self.flights.n_flights):
             for k in range(self.airport.n_bays):
 
-                # oOly add compliant flight bay combinations to the objective function.
+                # Only add compliant flight bay combinations to the objective function.
                 # This combination was never created and thus the decision variable
                 # does not exist.
                 if self.flights.bay_compliance(i, k):
@@ -634,3 +634,5 @@ class BayAssignment:
 
         c += "\n"
         return c
+
+

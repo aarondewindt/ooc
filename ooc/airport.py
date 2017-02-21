@@ -93,6 +93,7 @@ class Airport:
         self.load_bay_gate_distance()
         self.load_adjacency()
         self.load_domestic_gates()
+        self.load_remote_bays()
 
     def load_airlines(self):
         """

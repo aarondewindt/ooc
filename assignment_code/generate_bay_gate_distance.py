@@ -11,7 +11,7 @@ from io import StringIO
 # The simplified airport layout used by this script to calculate the distances.
 #
 #    2                                  14   21-25  15       20
-# +--+----------------------------------+----+---------------+
+# +--+----------------------------------+----+------+--------+
 # |                                          |
 # + STPV1/2                                  |
 # |                                          |
@@ -240,6 +240,7 @@ def gate_header():
     for i in range(1, 26):
         if i in non_existing_gates:
             continue
+        i = " 20B" if i == 25 else i
         yield "{:4}".format(i)
 
 sio.write(", ".join(gate_header()))
@@ -257,3 +258,6 @@ for bay_name, ds_gates in bay_gate_distance.items():
 
 # Print the final table.
 print(sio.getvalue())
+
+with open("jomo_kenyatta_international_airport/bay_gate_distance.csv", "w") as f:
+    f.write(sio.getvalue())

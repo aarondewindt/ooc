@@ -12,6 +12,22 @@ from ooc import print_color
 from ooc import Airport, Flights, BayAssignment, FlightSolution, GateAssignment, ft
 from ooc.key_pair_dictionary import KeyPairDictionary
 
+colors = [
+    ("#1f77b4", "#66b0e5"),  # 0 Blue
+    ("#17becf", "#5edfed"),  # 1 Cyan
+    ("#bcbd22", "#e4e467"),  # 2 Olive
+    ("#8c564b", "#c1948b"),  # 3 Brown
+    ("#ff7f0e", "#ffa04d"),  # 4 Orange
+    ("#d62728", "#e36868"),  # 5 Red
+    ("#7f7f7f", "#a6a6a6"),  # 6 Grey
+    ("#2ca02c", "#73d973"),  # 7 Green
+    ("#9467bd", "#b395d0"),  # 8 Purple
+    ("#e377c2", "#eeaad9"),  # 9 Pink
+]
+"""
+List of colors with dark and light version of each. Used for plotting.
+"""
+
 
 class BayGateSolver:
     """
@@ -189,8 +205,8 @@ class BayGateSolver:
             # Try to solve it.
             result = subprocess.run([self.cplex_command + " -c 'read {}' optimize 'write {}'".format(
                 self.gate_lp_path, self.gate_sol_path
-            )], shell=True, stdout = subprocess.PIPE)
-
+            )], shell=True, stdout=subprocess.PIPE)
+            # stdout=subprocess.PIPE
             if isfile(self.gate_sol_path):
                 print_color.pr_lg(result.stdout.decode("utf-8"))
             else:
@@ -255,7 +271,7 @@ class BayGateSolver:
         with open(self.result_path, "w") as f:
             f.write(s)
 
-    def create_bay_assignment_chart(self):
+    def create_bay_assignment_chart(self, title):
         fig = plt.figure(figsize=(8, 8))
         plt.yticks(range(self.airport.n_bays), self.airport.bay_names)
         # plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
@@ -264,28 +280,15 @@ class BayGateSolver:
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         plt.gca().xaxis.set_major_locator(mdates.HourLocator())
 
-        colors = [
-            ("#17becf", "#5edfed"),
-            ("#bcbd22", "#e4e467"),
-            ("#8c564b", "#c1948b"),
-            ("#ff7f0e", "#ffa04d"),
-            ("#d62728", "#e36868"),
-            ("#7f7f7f", "#a6a6a6"),
-            ("#2ca02c", "#73d973"),
-            ("#9467bd", "#b395d0"),
-            ("#e377c2", "#eeaad9"),
-        ]
-
-        color_idx = 1
-
         for i, solution in enumerate(self.solutions):
-            if solution.flight_type is ft.Arr:
-                color_idx = (color_idx + 1) % 9
-
-            if solution.flight_type is ft.Full:
-                color = "#1f77b4"
+            if self.flights.domestic(i, True):
+                color = colors[0]
+            elif self.flights.airline(i) == "KQ":
+                color = colors[5]
             else:
-                color = colors[color_idx][solution.flight_type == ft.Park]
+                color = colors[2]
+
+            color = color[1] if solution.flight_type == ft.Park else color[0]
 
             eta = solution.eta
             etd = solution.etd
@@ -294,10 +297,11 @@ class BayGateSolver:
 
         plt.grid(True, color='0.85')
         plt.gcf().autofmt_xdate()
+        plt.title(title)
         plt.tight_layout()
         return fig
 
-    def create_gate_assignment_chart(self):
+    def create_gate_assignment_chart(self, title):
         fig = plt.figure(figsize=(8, 8))
         plt.yticks(range(self.airport.n_gates), self.airport.gate_names)
         plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
@@ -329,12 +333,28 @@ class BayGateSolver:
 
                 dy = (-1)**dy * ((dy+1) // 2)
 
+                if self.flights.domestic(i, True):
+                    color = colors[0][0]
+                elif self.flights.airline(i) == "KQ":
+                    color = colors[5][0]
+                else:
+                    color = colors[2][0]
+
+                if solution.bay_idx in self.airport.remote_bays:
+                    linestyle = ":"
+                else:
+                    linestyle = "-"
+
                 eta = solution.eta
                 etd = solution.etd
                 plt.plot([eta, etd],
-                         [solution.gate_idx - 0.2 * dy] * 2, linewidth=4)
+                         [solution.gate_idx - 0.2 * dy] * 2, linewidth=4, color=color, linestyle=linestyle)
+
+
+
 
         plt.grid(True, color='0.85')
         plt.gcf().autofmt_xdate()
+        plt.title(title)
         plt.tight_layout()
         return fig

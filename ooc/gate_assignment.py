@@ -142,7 +142,7 @@ class GateAssignment:
             if self.has_preference(i, l):
                 return 1
             else:
-                return 0.99
+                return 1
         else:
             if self.has_preference(i, l):
                 return 0.5
@@ -286,7 +286,7 @@ class GateAssignment:
                         for l in range(self.airport.n_gates):
                             if (self.airport.bay_gate_distance[k][l] is not None) and \
                                (self.airport.bay_gate_distance[j_k][l] is not None):
-                                c += "tc_{}_{}_{}: {} + {} - {} < 1\n".format(i, j, l,
+                                c += "tc_{}_{}_{}: {} + {} - {} <= 1\n".format(i, j, l,
                                                                               self.x(i, l),
                                                                               self.x(j, l),
                                                                               self.m(i, j, l))
