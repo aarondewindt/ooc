@@ -43,8 +43,8 @@ def main():
     # solver.load_gate_assignment_solution()
     #
     # solver.print_solution()
-    # bay_fig = solver.create_bay_assignment_chart()
-    # gate_fig = solver.create_gate_assignment_chart()
+    # bay_fig = solver.create_bay_assignment_chart("Bay assignment for the 5th of July 2015")
+    # gate_fig = solver.create_gate_assignment_chart("Gate assignment for the 2nd of June 2015")
 
     plt.show()
 
