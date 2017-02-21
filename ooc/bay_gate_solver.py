@@ -43,7 +43,7 @@ class BayGateSolver:
        each flight.
     """
 
-    def __init__(self, airport_data_path, flights_data_path, jid, cplex_command="cplex", buffer_time=None,
+    def __init__(self, airport_data_path, flights_data_path, jid, cplex_command="cplex", shell=True, buffer_time=None,
                  spare_bays=None):
         self.airport = Airport(airport_data_path=airport_data_path)
         """"
@@ -83,11 +83,21 @@ class BayGateSolver:
 
         # Check whether we can access cplex from the command line.
         try:
-            subprocess.run([cplex_command + " -c help"], shell=True, stdout=subprocess.PIPE)
+            result = subprocess.run([cplex_command, "-c", "help"],
+                                    shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             # We can. Store command for later use.
-            self.cplex_command = cplex_command
+            if len(result.stderr):
+                print_color.pr_r(
+                    "Warning: Cplex was not found. Please check whether the cplex command is correct. Otherwise cplex "
+                    "will have to be run separately.")
+                self.cplex_command = None
+            else:
+                self.cplex_command = cplex_command
         except OSError:
             # We can't. We'll have to run the solver manually.
+            print_color.pr_r(
+                "Warning: Cplex was not found. Please check whether the cplex command is correct. Otherwise cplex "
+                "will have to be run separately.")
             self.cplex_command = None
 
     def init_workspace(self):
@@ -105,7 +115,7 @@ class BayGateSolver:
             with open(join(self.workspace_path, ".gitignore"), "w") as f:
                 # For now ignore everything. At some point I'm gonna change this so it keeps
                 # the final results.
-                f.write("""*\n!result.csv""")
+                f.write("""*\n!result.csv\n*.sol""")
 
     def init_solution_list(self):
         """
@@ -144,9 +154,12 @@ class BayGateSolver:
                 remove(self.bay_sol_path)
 
             # Try to solve it.
-            result = subprocess.run([self.cplex_command + " -c 'read {}' optimize 'write {}'".format(
-                self.bay_lp_path, self.bay_sol_path
-            )], shell=True, stdout=subprocess.PIPE)
+            result = subprocess.run([self.cplex_command,
+                                     "-c",
+                                     "read {}".format(self.bay_lp_path,),
+                                     "optimize",
+                                     "write {}".format(self.bay_sol_path)],
+                                    shell=True, stdout=subprocess.PIPE)
 
             if isfile(self.bay_sol_path):
                 print_color.pr_lg(result.stdout.decode("utf-8"))
@@ -207,14 +220,18 @@ class BayGateSolver:
                 remove(self.gate_sol_path)
 
             # Try to solve it.
-            result = subprocess.run([self.cplex_command + " -c 'read {}' optimize 'write {}'".format(
-                self.gate_lp_path, self.gate_sol_path
-            )], shell=True, stdout=subprocess.PIPE)
-            # stdout=subprocess.PIPE
+            result = subprocess.run([self.cplex_command,
+                                     "-c",
+                                     "read {}".format(self.gate_lp_path, ),
+                                     "optimize",
+                                     "write {}".format(self.gate_sol_path)],
+                                    shell=True, )  # stdout=subprocess.PIPE
+
             if isfile(self.gate_sol_path):
-                print_color.pr_lg(result.stdout.decode("utf-8"))
+                pass
+                # print_color.pr_lg(result.stdout.decode("utf-8"))
             else:
-                sys.stderr.write(result.stdout.decode("utf-8"))
+                # sys.stderr.write(result.stdout.decode("utf-8"))
                 raise Exception("No solution file was generated for the gate assignment.")
 
             print("Gate assignment solved\n")

@@ -205,8 +205,6 @@ class BayAssignment:
                 for k in range(self.airport.n_bays):
                     # Only add terms for flight bay combinations that are valid.
                     if self.flights.bay_compliance(i, k):
-                        if i == 173:
-                            print(i, k, self.preference(i, k))
                         preference = self.preference(i, k)
                         # Only add a term for flights with preference.
                         if preference is not None:
@@ -216,8 +214,6 @@ class BayAssignment:
                             # Generate string with the decision variable and it's constant
                             # and add it to the objective function.
                             z2 += " -{:<15.4f} {:10s}".format(constant, self.x(i, k))
-                            if i == 173:
-                                print(i, k, " -{:<15.4f} {:10s}".format(constant, self.x(i, k)))
                             # Add new line if necessary
                             if (not self.compact) or (len(z2.split("\n")[-1]) > self.line_width_limit):
                                 z2 = z2.rstrip()

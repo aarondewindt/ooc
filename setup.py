@@ -13,7 +13,7 @@ setup(
     author='Aaron de Windt, Kyana Shayan',
     author_email='aaron.dewindt@gmail.com, kyana.shayan@gmail.com',
 
-    install_requires=['numpy', 'scipy', 'lxml'],
+    install_requires=['numpy', 'scipy', 'lxml', 'recordclass'],
     packages=find_packages('.', exclude=["test"]),
 
     classifiers=[
