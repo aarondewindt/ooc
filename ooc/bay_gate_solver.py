@@ -83,8 +83,15 @@ class BayGateSolver:
 
         # Check whether we can access cplex from the command line.
         try:
-            result = subprocess.run([cplex_command, "-c", "help"],
+            # For some reason the 'subprocess.run' function does not work like described in the documentation in
+            # linux. So after some trail and error I got it working by giving it a list with
+            if sys.platform == "linux":
+                args = [cplex_command + " -c help"]
+            else:  # This works on Windows. Probably also MAC since this is the behaviour described in the documentation
+                args = [cplex_command, "-c", "help"]
+            result = subprocess.run(args,
                                     shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
             # We can. Store command for later use.
             if len(result.stderr):
                 print_color.pr_r(
@@ -154,11 +161,20 @@ class BayGateSolver:
                 remove(self.bay_sol_path)
 
             # Try to solve it.
-            result = subprocess.run([self.cplex_command,
-                                     "-c",
-                                     "read {}".format(self.bay_lp_path,),
-                                     "optimize",
-                                     "write {}".format(self.bay_sol_path)],
+            # For some reason the 'subprocess.run' function does not work like described in the documentation in
+            # linux. So after some trail and error I got it working by giving it a list with
+            if sys.platform == "linux":
+                args = [self.cplex_command + " -c 'read {}' optimize 'write {}'".format(
+                self.bay_lp_path, self.bay_sol_path
+            )]
+            else:  # This works on Windows. Probably also MAC since this is the behaviour described in the documentation
+                args = [
+                    self.cplex_command,
+                    "-c",
+                    "read {}".format(self.bay_lp_path,),
+                    "optimize",
+                    "write {}".format(self.bay_sol_path)]
+            result = subprocess.run(args,
                                     shell=True, stdout=subprocess.PIPE)
 
             if isfile(self.bay_sol_path):
@@ -219,13 +235,22 @@ class BayGateSolver:
             if isfile(self.gate_sol_path):
                 remove(self.gate_sol_path)
 
+
             # Try to solve it.
-            result = subprocess.run([self.cplex_command,
-                                     "-c",
-                                     "read {}".format(self.gate_lp_path, ),
-                                     "optimize",
-                                     "write {}".format(self.gate_sol_path)],
-                                    shell=True, )  # stdout=subprocess.PIPE
+            # For some reason the 'subprocess.run' function does not work like described in the documentation in
+            # linux. So after some trail and error I got it working by giving it a list with
+            if sys.platform == "linux":
+                args = [self.cplex_command + " -c 'read {}' optimize 'write {}'".format(
+                self.gate_lp_path, self.gate_sol_path)]
+            else:  # This works on Windows. Probably also MAC since this is the behaviour described in the documentation
+                args = [
+                    self.cplex_command,
+                    "-c",
+                    "read {}".format(self.gate_lp_path,),
+                    "optimize",
+                    "write {}".format(self.gate_sol_path)]
+            result = subprocess.run(args,
+                                    shell=True, stdout=subprocess.PIPE)
 
             if isfile(self.gate_sol_path):
                 pass
@@ -316,6 +341,7 @@ class BayGateSolver:
         # Format the x-axis so it displays the time of the day.
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
         plt.gca().xaxis.set_major_locator(mdates.HourLocator())
+        plt.ylim([-1, self.airport.n_bays])
 
         reposition_idx = 0
 
@@ -381,9 +407,11 @@ class BayGateSolver:
         # Set the y-axis tick labels to gate names
         plt.yticks(range(self.airport.n_gates), self.airport.gate_names)
 
-        # Set the x-axis limit to show the entire day.
+        # Set the axis limits
         plt.xlim([datetime.combine(self.flights.config['date'], time(0, 0, 0)),
                   datetime.combine(self.flights.config['date'], time(23, 59, 59))])
+        plt.ylim([-1, self.airport.n_gates])
+
 
         # Format the x-axis so it displays the time of the day.
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))

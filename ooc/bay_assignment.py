@@ -179,7 +179,7 @@ class BayAssignment:
 
     def preference(self, i, k):
         if k in self.flights.flight_schedule[i].preference.bays:
-            return 1
+            return 1 if self.flights.flight_schedule[i].flight_type in [ft.Full, ft.Dep] else None
         else:
             return None
 
