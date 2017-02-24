@@ -122,7 +122,7 @@ class BayGateSolver:
             with open(join(self.workspace_path, ".gitignore"), "w") as f:
                 # For now ignore everything. At some point I'm gonna change this so it keeps
                 # the final results.
-                f.write("""*\n!result.csv\n*.sol""")
+                f.write("""*.log""")
 
     def init_solution_list(self):
         """
