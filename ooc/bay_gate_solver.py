@@ -44,7 +44,9 @@ class BayGateSolver:
     """
 
     def __init__(self, airport_data_path, flights_data_path, jid, cplex_command="cplex", shell=True, buffer_time=None,
-                 spare_bays=None):
+                 spare_bays=None, line_width_limit=120):
+        self.line_width_limit = line_width_limit
+
         self.airport = Airport(airport_data_path=airport_data_path)
         """"
         class:`ooc.Airport` object of holding the information of
@@ -148,7 +150,7 @@ class BayGateSolver:
         Generates the lp code needed to solve the bay assignment,
         solves it using cplex and loads in the solution.
         """
-        bay_assignment = BayAssignment(self.flights)
+        bay_assignment = BayAssignment(self.flights, line_width_limit=self.line_width_limit)
 
         # Generate and save lp code.
         with open(self.bay_lp_path, "w") as f:
@@ -223,7 +225,7 @@ class BayGateSolver:
         if bays[0] is None:
             raise Exception("No bay assignment solutions has been loaded.")
 
-        gate_assignment = GateAssignment(self.flights, bays)
+        gate_assignment = GateAssignment(self.flights, bays, line_width_limit=self.line_width_limit)
 
         # Generate and save lp code.
         with open(self.gate_lp_path, "w") as f:

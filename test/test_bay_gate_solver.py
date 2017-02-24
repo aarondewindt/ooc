@@ -17,7 +17,8 @@ def abs_path(rel_path):
 class TestBayGateSolver(unittest.TestCase):
     def test_solve_bay_assignment(self):
         solver = BayGateSolver(abs_path("./airport_data"),
-                               abs_path("./flight_data_small"), "test_case")
+                               abs_path("./flight_data_small"), "test_case",
+                               line_width_limit=80)
 
         solver.solve_bay_assignment()
         solver.load_bay_assignment_solution()
