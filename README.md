@@ -32,8 +32,8 @@ There are three directories in this repositories
  - test:            Contains python unittests to test different components of 
                     the program.
                     
- - ooc:             Main program sources. The code in here load in the data, 
-                    generate the lp code and process the results.
+ - ooc:             Main program sources. The code in here loads in the data, 
+                    generates the lp code and process the results.
                     
  - assignment_code: This directory contains the input data and the main source 
                     file of the assignment. This file calls the code in ooc and
@@ -42,8 +42,10 @@ There are three directories in this repositories
 
 Running the assignment code
 ===========================
-The assignment code can be started by running the `main.py` file in the `assignment_code`
-directory.
+The assignment code can be started by running the `main.py` file in the 
+`assignment_code` directory. Note that by default the script will only load in
+the last result and show them. To run the optimization code, change 
+`only_show_results` in `main.py` to `False` before running.
 
 If the solver cannot find cplex it is possible to give it a path with the location
 of the **cplex interactive solver** executable. For example:
