@@ -176,13 +176,10 @@ class BayGateSolver:
                     "read {}".format(self.bay_lp_path,),
                     "optimize",
                     "write {}".format(self.bay_sol_path)]
-            result = subprocess.run(args,
-                                    shell=True, stdout=subprocess.PIPE)
+            subprocess.run(args,
+                           shell=True,)
 
-            if isfile(self.bay_sol_path):
-                print_color.pr_lg(result.stdout.decode("utf-8"))
-            else:
-                print(result.stdout.decode("utf-8"))
+            if not isfile(self.bay_sol_path):
                 raise Exception("No solution file was generated for the bay assignment.")
 
             print("Bay assignment solved\n")
@@ -237,7 +234,6 @@ class BayGateSolver:
             if isfile(self.gate_sol_path):
                 remove(self.gate_sol_path)
 
-
             # Try to solve it.
             # For some reason the 'subprocess.run' function does not work like described in the documentation in
             # linux. So after some trail and error I got it working by giving it a list with
@@ -251,14 +247,10 @@ class BayGateSolver:
                     "read {}".format(self.gate_lp_path,),
                     "optimize",
                     "write {}".format(self.gate_sol_path)]
-            result = subprocess.run(args,
-                                    shell=True, stdout=subprocess.PIPE)
+            subprocess.run(args,
+                           shell=True)
 
-            if isfile(self.gate_sol_path):
-                pass
-                # print_color.pr_lg(result.stdout.decode("utf-8"))
-            else:
-                # sys.stderr.write(result.stdout.decode("utf-8"))
+            if not isfile(self.gate_sol_path):
                 raise Exception("No solution file was generated for the gate assignment.")
 
             print("Gate assignment solved\n")
