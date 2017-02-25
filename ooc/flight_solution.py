@@ -48,12 +48,12 @@ class FlightSolution:
                      ("dest", 4, None),
                      ("etd", 5, lambda x: x.strftime("%H:%M")),
                      ("ac_type", 7, None),
-                     ("pref", 10, preference_to_str)]
+                     ("pref", 15, preference_to_str)]
 
     def str_heading(self):
         s = ""
         for name, width, _ in self.cols:
-            s += "{name:>{width}}  ".format(name=name, width=width)
+            s += "{name:{width}}  ".format(name=name, width=width)
         return s + "\n" + "="*len(s) + "\n"
 
     def str_data(self):

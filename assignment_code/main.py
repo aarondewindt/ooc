@@ -1,6 +1,7 @@
 """
 This is the main entry file for the assignment.
 """
+
 import sys
 import os
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ only_show_results = True
 
 def main():
     # Solve the two cases and get the figures.
-    # case_1_figs = solve_2nd_of_june_2015()
+    case_1_figs = solve_2nd_of_june_2015()
     case_2_figs = solve_5th_of_july_2015()
 
     # Show the figures.
@@ -61,7 +62,7 @@ def solve_5th_of_july_2015():
         abs_path("schedule_2015_07_05"),
         jid="workspace_2015_07_05",
         buffer_time=timedelta(minutes=15),
-        # spare_bays=['J3A', 'J3B']
+        spare_bays=['J3A', 'J3B']
     )
 
     bay_dt_cg, bay_dt_sl = solver.solve_bay_assignment() if not only_show_results else None, None
@@ -94,8 +95,7 @@ def abs_path(rel_path):
 
 
 if __name__ == "__main__":
-    # Add the repository root the python path in order to make the ooc package available for import.
-    # This has not been tested.
+    # Add the repository root to the python path in order to make the ooc package available for import.
     sys.path.append(abs_path(".."))
 
     # Run the main function.

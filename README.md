@@ -1,7 +1,10 @@
 # ooc
-This python package contains the code for the group assignment of 
-AE4441-16 operations optimization course.
+This repository contains the code used to complete the assignment for the 
+AE4441-16 operations optimization course. The topic chosen for this assignment
+was based on J.O. Deken's master thesis: Robust Scheduling for the Bay and 
+Gate Assignment, A Kenya Airways Case Study.
 
+Repository url: https://github.com/aarondewindt/ooc
 
 Authors
 =======
@@ -19,7 +22,7 @@ Dependencies
  - scipy
  - matplotlib
  - recordclass
- - Cplex
+ - Cplex (interactive solver)
 
 
 Repository structure
@@ -39,6 +42,20 @@ There are three directories in this repositories
 
 Running the assignment code
 ===========================
-The assignment code requires the ooc python package to be installed. To solve this
-the 'main_no_install.py' can be called to run the code without having to install ooc.
+The assignment code can be started by running the `main.py` file in the `assignment_code`
+directory.
 
+If the solver cannot find cplex it is possible to give it a path with the location
+of the **cplex interactive solver** executable. For example:
+
+```
+solver = BayGateSolver(
+        abs_path("jomo_kenyatta_international_airport"),
+        abs_path("schedule_2015_07_05"),
+        jid="workspace_2015_07_05",
+        buffer_time=timedelta(minutes=15),
+        spare_bays=['J3A', 'J3B'],
+        
+        cplex_command="path/to/cplex.exe"  # <---
+    )
+```
