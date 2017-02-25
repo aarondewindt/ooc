@@ -1,3 +1,7 @@
+"""
+These tests are used to test the Airport class used to load in and process the airport information.
+"""
+
 import unittest
 import os
 

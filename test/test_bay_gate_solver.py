@@ -1,3 +1,7 @@
+"""
+This test just runs the small flight schedule and print the results. It doesn't do any checking.
+"""
+
 import unittest
 import os
 

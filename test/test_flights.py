@@ -1,3 +1,7 @@
+"""
+These tests are used to test the Flights class used to load in and process the flight schedule information.
+"""
+
 import unittest
 import os
 import datetime

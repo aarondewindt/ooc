@@ -4,7 +4,7 @@
    problemName="/media/stuff/stuff/projects/skol/ae4441_16_operations_optimization/ooc/test/test_case/bay.lp"
    solutionName="incumbent"
    solutionIndex="-1"
-   objectiveValue="-3243234"
+   objectiveValue="-2429350"
    solutionTypeValue="3"
    solutionTypeString="primal"
    solutionStatusValue="101"
@@ -13,7 +13,7 @@
    primalFeasible="1"
    dualFeasible="1"
    MIPNodes="0"
-   MIPIterations="14"
+   MIPIterations="16"
    writeLevel="1"/>
  <quality
    epInt="1.0000000000000001e-05"
@@ -100,10 +100,10 @@
   <constraint name="tc_6_7_11" index="74" slack="1"/>
   <constraint name="tc_6_7_12" index="75" slack="1"/>
   <constraint name="tc_6_7_13" index="76" slack="1"/>
-  <constraint name="tc_6_7_14" index="77" slack="0"/>
+  <constraint name="tc_6_7_14" index="77" slack="1"/>
   <constraint name="tc_6_7_15" index="78" slack="1"/>
   <constraint name="tc_6_7_16" index="79" slack="1"/>
-  <constraint name="tc_6_7_17" index="80" slack="1"/>
+  <constraint name="tc_6_7_17" index="80" slack="0"/>
   <constraint name="tc_6_7_18" index="81" slack="1"/>
   <constraint name="tc_6_7_19" index="82" slack="0"/>
   <constraint name="tc_6_7_20" index="83" slack="1"/>
@@ -758,7 +758,7 @@
   <constraint name="ad_14_0_3" index="732" slack="0"/>
   <constraint name="ad_8_0_6" index="733" slack="1"/>
   <constraint name="ad_9_0_6" index="734" slack="1"/>
-  <constraint name="ad_13_0_6" index="735" slack="0"/>
+  <constraint name="ad_13_0_6" index="735" slack="1"/>
   <constraint name="ad_14_0_6" index="736" slack="0"/>
   <constraint name="ad_8_0_7" index="737" slack="1"/>
   <constraint name="ad_9_0_7" index="738" slack="1"/>
@@ -786,7 +786,7 @@
   <constraint name="ad_14_0_12" index="760" slack="0"/>
   <constraint name="ad_8_3_6" index="761" slack="1"/>
   <constraint name="ad_9_3_6" index="762" slack="1"/>
-  <constraint name="ad_13_3_6" index="763" slack="0"/>
+  <constraint name="ad_13_3_6" index="763" slack="1"/>
   <constraint name="ad_14_3_6" index="764" slack="1"/>
   <constraint name="ad_8_3_7" index="765" slack="1"/>
   <constraint name="ad_9_3_7" index="766" slack="1"/>
@@ -815,27 +815,27 @@
   <constraint name="ad_8_6_7" index="789" slack="1"/>
   <constraint name="ad_9_6_7" index="790" slack="1"/>
   <constraint name="ad_13_6_7" index="791" slack="1"/>
-  <constraint name="ad_14_6_7" index="792" slack="0"/>
+  <constraint name="ad_14_6_7" index="792" slack="1"/>
   <constraint name="ad_8_6_8" index="793" slack="1"/>
   <constraint name="ad_9_6_8" index="794" slack="1"/>
   <constraint name="ad_13_6_8" index="795" slack="1"/>
-  <constraint name="ad_14_6_8" index="796" slack="0"/>
+  <constraint name="ad_14_6_8" index="796" slack="1"/>
   <constraint name="ad_8_6_9" index="797" slack="1"/>
   <constraint name="ad_9_6_9" index="798" slack="1"/>
   <constraint name="ad_13_6_9" index="799" slack="1"/>
-  <constraint name="ad_14_6_9" index="800" slack="0"/>
+  <constraint name="ad_14_6_9" index="800" slack="1"/>
   <constraint name="ad_8_6_10" index="801" slack="1"/>
   <constraint name="ad_9_6_10" index="802" slack="1"/>
   <constraint name="ad_13_6_10" index="803" slack="1"/>
-  <constraint name="ad_14_6_10" index="804" slack="0"/>
+  <constraint name="ad_14_6_10" index="804" slack="1"/>
   <constraint name="ad_8_6_11" index="805" slack="1"/>
   <constraint name="ad_9_6_11" index="806" slack="1"/>
   <constraint name="ad_13_6_11" index="807" slack="1"/>
-  <constraint name="ad_14_6_11" index="808" slack="0"/>
+  <constraint name="ad_14_6_11" index="808" slack="1"/>
   <constraint name="ad_8_6_12" index="809" slack="1"/>
   <constraint name="ad_9_6_12" index="810" slack="1"/>
   <constraint name="ad_13_6_12" index="811" slack="1"/>
-  <constraint name="ad_14_6_12" index="812" slack="0"/>
+  <constraint name="ad_14_6_12" index="812" slack="1"/>
   <constraint name="ad_8_7_8" index="813" slack="1"/>
   <constraint name="ad_9_7_8" index="814" slack="1"/>
   <constraint name="ad_13_7_8" index="815" slack="1"/>
@@ -1101,10 +1101,10 @@
   <variable name="X_5_11" index="200" value="-0"/>
   <variable name="X_5_12" index="201" value="-0"/>
   <variable name="X_5_13" index="202" value="-0"/>
-  <variable name="X_5_14" index="203" value="1"/>
+  <variable name="X_5_14" index="203" value="-0"/>
   <variable name="X_5_15" index="204" value="-0"/>
   <variable name="X_5_16" index="205" value="-0"/>
-  <variable name="X_5_17" index="206" value="0"/>
+  <variable name="X_5_17" index="206" value="1"/>
   <variable name="X_5_18" index="207" value="-0"/>
   <variable name="X_5_19" index="208" value="-0"/>
   <variable name="X_5_20" index="209" value="-0"/>
@@ -1135,9 +1135,9 @@
   <variable name="X_5_45" index="234" value="-0"/>
   <variable name="X_5_46" index="235" value="-0"/>
   <variable name="X_5_47" index="236" value="-0"/>
-  <variable name="X_6_1" index="237" value="-0"/>
+  <variable name="X_6_1" index="237" value="0"/>
   <variable name="X_6_2" index="238" value="-0"/>
-  <variable name="X_6_4" index="239" value="-0"/>
+  <variable name="X_6_4" index="239" value="0"/>
   <variable name="X_6_5" index="240" value="-0"/>
   <variable name="X_6_6" index="241" value="-0"/>
   <variable name="X_6_7" index="242" value="-0"/>
@@ -1147,10 +1147,10 @@
   <variable name="X_6_11" index="246" value="-0"/>
   <variable name="X_6_12" index="247" value="-0"/>
   <variable name="X_6_13" index="248" value="-0"/>
-  <variable name="X_6_14" index="249" value="1"/>
+  <variable name="X_6_14" index="249" value="-0"/>
   <variable name="X_6_15" index="250" value="-0"/>
   <variable name="X_6_16" index="251" value="-0"/>
-  <variable name="X_6_17" index="252" value="-0"/>
+  <variable name="X_6_17" index="252" value="1"/>
   <variable name="X_6_18" index="253" value="-0"/>
   <variable name="X_6_19" index="254" value="-0"/>
   <variable name="X_6_20" index="255" value="-0"/>
@@ -1457,7 +1457,7 @@
   <variable name="X_12_45" index="556" value="-0"/>
   <variable name="X_12_46" index="557" value="0"/>
   <variable name="X_12_47" index="558" value="0"/>
-  <variable name="U_4_17" index="559" value="1"/>
+  <variable name="U_4_17" index="559" value="0"/>
   <variable name="U_5_1" index="560" value="0"/>
   <variable name="U_5_2" index="561" value="0"/>
   <variable name="U_5_4" index="562" value="0"/>

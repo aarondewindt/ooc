@@ -1,5 +1,12 @@
+"""
+These unittest make sure that nothing is accidentally changed to the bay assignment code.
+The code was first manually checked by printing it out on the console. Once done, the correct results
+where stored in a file and the generated code is then checked against the those.
+"""
+
 import unittest
 import os
+import pickle
 
 from ooc import Airport, Flights, BayAssignment
 
@@ -13,9 +20,31 @@ def abs_path(rel_path):
     """
     return os.path.normpath(os.path.join(os.path.abspath(os.path.dirname(__file__)), rel_path))
 
+RESET_CORRECT = False
+
+
+def set_correct(key, value):
+    if not RESET_CORRECT:
+        return
+
+    file_path = abs_path("bay_test_correct.pickle")
+    if os.path.isfile(file_path):
+        with open(file_path, "rb") as f:
+            data = pickle.load(f)
+    else:
+        data = {}
+    data[key] = value
+    with open(file_path, "wb") as f:
+        pickle.dump(data, f)
+
+
+def get_correct(key):
+    with open(abs_path("bay_test_correct.pickle"), "rb") as f:
+        data = pickle.load(f)
+        return data[key]
+
 
 class MyTestCase(unittest.TestCase):
-
     def test_lp_code(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
@@ -35,67 +64,90 @@ class MyTestCase(unittest.TestCase):
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
 
+        # This is the only function allowed to create new decision variables, so it has to be called first.
+        bay_assignment.constraint_single_bay_compliance()
+
         code = bay_assignment.of_max_airline_preference()
-        print(code)
+        # print(code)
+        set_correct("test_of_max_airline_preference", code)
+        self.assertEqual(get_correct("test_of_max_airline_preference"), code)
 
     def test_constraint_single_time_slot(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
+        bay_assignment.constraint_single_bay_compliance()
 
         code = bay_assignment.constraint_single_time_slot()
-        # print(code)
-        # self.assertIn(single_time_slot_correct, code)
+        print(code)
+        set_correct("test_constraint_single_time_slot", code)
+        self.assertEqual(get_correct("test_constraint_single_time_slot"), code)
 
     def test_constraint_single_bay_compliance(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
+        bay_assignment.constraint_single_bay_compliance()
 
         code = bay_assignment.constraint_single_bay_compliance()
-        # print(code)
+        print(code)
+        set_correct("test_constraint_single_bay_compliance", code)
+        self.assertEqual(get_correct("test_constraint_single_bay_compliance"), code)
 
     def test_constraint_fueling(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
+        bay_assignment.constraint_single_bay_compliance()
 
         code = bay_assignment.constraint_fueling()
-        # print(code)
+        print(code)
+        set_correct("test_constraint_fueling", code)
+        self.assertEqual(get_correct("test_constraint_fueling"), code)
 
     def test_constraint_splitted_flight(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
+        bay_assignment.constraint_single_bay_compliance()
 
         code = bay_assignment.constraint_splitted_flight()
-        # print(code)
+        print(code)
+        set_correct("test_constraint_splitted_flight", code)
+        self.assertEqual(get_correct("test_constraint_splitted_flight"), code)
 
     def test_constraint_adjacency(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
+        bay_assignment.constraint_single_bay_compliance()
 
         code = bay_assignment.constraint_adjacency()
-        # print(code)
+        print(code)
+        set_correct("test_constraint_adjacency", code)
+        self.assertEqual(get_correct("test_constraint_adjacency"), code)
 
     def test_weights(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
-        # print(bay_assignment.alpha)
-        # print(bay_assignment.beta)
-        # print(bay_assignment.gamma)
+        weights = (bay_assignment.alpha, bay_assignment.beta, bay_assignment.gamma)
+        print(weights)
+        set_correct("test_weights", weights)
+        self.assertEqual(get_correct("test_weights"), weights)
 
     def test_penalty_values(self):
         airport = Airport(abs_path("./airport_data"))
         flights = Flights(abs_path("./flight_data_small"), airport)
         bay_assignment = BayAssignment(flights)
+        bay_assignment.constraint_single_bay_compliance()
 
         bay_assignment.constraint_adjacency()
         bay_assignment.constraint_splitted_flight()
         code = bay_assignment.of_penalty_values()
-        # print(code)
+        print(code)
+        set_correct("test_penalty_values", code)
+        self.assertEqual(get_correct("test_penalty_values"), code)
 
 
 single_time_slot_correct = """// Single time slot constraints.
