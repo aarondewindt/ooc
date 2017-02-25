@@ -1,3 +1,7 @@
+"""
+The class in here generates the code for the bay assignment.
+"""
+
 from datetime import datetime, time
 from math import isclose
 
@@ -308,7 +312,7 @@ class GateAssignment:
         :return:
         """
         print(" - Constraint: Time conflict.")
-        c = "\\ Time conflict constrains\n   "
+        c = "\\ Time conflict constrains\n"
 
         # Loop through all pairs of flights
         for i, k, flight in self.departing_flights():
@@ -322,10 +326,10 @@ class GateAssignment:
                         for l in range(self.airport.n_gates):
                             if (self.is_feasible(i, l)) and \
                                (self.is_feasible(j, l)):
-                                c += "tc_{}_{}_{}: {} + {} - {} <= 1\n".format(i, j, l,
-                                                                               self.x(i, l),
-                                                                               self.x(j, l),
-                                                                               self.m(i, j, l))
+                                c += "   tc_{}_{}_{}: {} + {} - {} <= 1\n".format(i, j, l,
+                                                                                  self.x(i, l),
+                                                                                  self.x(j, l),
+                                                                                  self.m(i, j, l))
         return c
 
     # These constraints where removed from the LP file since they are not neccesary anymore.

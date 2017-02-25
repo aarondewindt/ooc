@@ -1,17 +1,21 @@
-from os import mkdir, remove, system
+"""
+This is the main interface of the package. The class in here creates the necessary instance of the Airport, Flight
+BayAssignment and GateAssignment classes, runs all of them and processes the results.
+"""
+
+from os import mkdir, remove
 from os.path import isdir, isfile, abspath, normpath, join
 import subprocess
 import sys
 import xml.etree.ElementTree as ET  #: the extra-terrestrial
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import timedelta, datetime, time
+from datetime import datetime, time
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
-
+from time import perf_counter
 
 from ooc import print_color
-
 from ooc import Airport, Flights, BayAssignment, FlightSolution, GateAssignment, ft
 from ooc.key_pair_dictionary import KeyPairDictionary
 
@@ -39,11 +43,15 @@ class BayGateSolver:
 
     :param string airport_path: Path to directory holding the airport data
     :param string flights_path: Path to directory holding the flights data.
+    :param string cplex_command: Terminal command to access the cplex interactive solver.
     :param datetime.timedelta buffer_time: Amount of buffer time to add before and after
        each flight.
+    :param list spare_bays: List of strings with the names of the spare bays.
+    :param int line_width_limit: Line width limit for the generated LP code. Note since the line
+       width is checked after appending, the code might exceed this limit with a few characters.
     """
 
-    def __init__(self, airport_data_path, flights_data_path, jid, cplex_command="cplex", shell=True, buffer_time=None,
+    def __init__(self, airport_data_path, flights_data_path, jid, cplex_command="cplex", buffer_time=None,
                  spare_bays=None, line_width_limit=120):
         self.line_width_limit = line_width_limit
 
@@ -150,11 +158,14 @@ class BayGateSolver:
         Generates the lp code needed to solve the bay assignment,
         solves it using cplex and loads in the solution.
         """
+        t0 = perf_counter()
         bay_assignment = BayAssignment(self.flights, line_width_limit=self.line_width_limit)
 
         # Generate and save lp code.
         with open(self.bay_lp_path, "w") as f:
             f.write(bay_assignment.lp_code())
+        dt_code_generation = perf_counter() - t0
+        dt_solving = 0
 
         if self.cplex_command is not None:
             print("Solving bay assignment with cplex...")
@@ -176,8 +187,10 @@ class BayGateSolver:
                     "read {}".format(self.bay_lp_path,),
                     "optimize",
                     "write {}".format(self.bay_sol_path)]
+            t0 = perf_counter()
             subprocess.run(args,
                            shell=True,)
+            dt_solving = perf_counter() - t0
 
             if not isfile(self.bay_sol_path):
                 raise Exception("No solution file was generated for the bay assignment.")
@@ -187,6 +200,8 @@ class BayGateSolver:
             print("Cplex is not available in the command line.\n"
                   "The bay assignment lp code was generated and saved at\n{}\n".format(self.bay_lp_path) +
                   "Please solve it in cplex and save the resulting .sol (xml) file at\n{}\n".format(self.bay_sol_path))
+
+        return dt_code_generation, dt_solving
 
     def load_bay_assignment_solution(self):
         # Check whether there is a solution file in the workspace.
@@ -218,6 +233,8 @@ class BayGateSolver:
             assert solution.bay is not None, "Flight {} has no bay assigned to it.".format(i)
 
     def solve_gate_assignment(self):
+        t0 = perf_counter()
+
         bays = [solution.bay_idx for solution in self.solutions]
         if bays[0] is None:
             raise Exception("No bay assignment solutions has been loaded.")
@@ -227,6 +244,9 @@ class BayGateSolver:
         # Generate and save lp code.
         with open(self.gate_lp_path, "w") as f:
             f.write(gate_assignment.lp_code())
+
+        dt_code_generation = perf_counter() - t0
+        dt_solving = 0
 
         if self.cplex_command is not None:
             print("Solving gate assignment with cplex...")
@@ -247,8 +267,15 @@ class BayGateSolver:
                     "read {}".format(self.gate_lp_path,),
                     "optimize",
                     "write {}".format(self.gate_sol_path)]
-            subprocess.run(args,
-                           shell=True)
+
+            try:
+                t0 = perf_counter()
+                subprocess.run(args,
+                               shell=True)
+                dt_solving = perf_counter() - t0
+            except KeyboardInterrupt:
+                # By handling this exception we can cancel cplex and get the intermediate solution.
+                pass
 
             if not isfile(self.gate_sol_path):
                 raise Exception("No solution file was generated for the gate assignment.")
@@ -258,6 +285,8 @@ class BayGateSolver:
             print("Cplex is not available in the command line.\n"
                   "The gate assignment lp code was generated and saved at\n{}\n".format(self.gate_lp_path) +
                   "Please solve it in cplex and save the resulting .sol (xml) file at\n{}\n".format(self.gate_sol_path))
+
+        return dt_code_generation, dt_solving
 
     def load_gate_assignment_solution(self):
         # Check whether there is a solution file in the workspace.

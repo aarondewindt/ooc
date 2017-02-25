@@ -1,3 +1,7 @@
+"""
+The class in here generates the code for the bay assignment.
+"""
+
 from ooc import ft
 
 

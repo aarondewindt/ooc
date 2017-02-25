@@ -1,3 +1,7 @@
+"""
+The class in here loads in and processes the data about the flight schedule.
+"""
+
 from recordclass import recordclass
 from enum import Enum
 from os.path import abspath, join, normpath

@@ -1,3 +1,7 @@
+"""
+The clss in here loads in and processes the airport information data files.
+"""
+
 from os.path import abspath, join, normpath
 from collections import namedtuple, OrderedDict
 

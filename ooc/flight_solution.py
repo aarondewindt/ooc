@@ -1,6 +1,9 @@
-
+"""
+This class holds the results for a single flight.
+"""
 
 # To be honest, I'm kinda regretting the decision I took in the beginning to not use SQL.
+
 
 class FlightSolution:
     """This class holds the solution of a single flight."""
